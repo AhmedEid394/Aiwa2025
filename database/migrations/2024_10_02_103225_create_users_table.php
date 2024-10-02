@@ -14,7 +14,6 @@ class CreateUsersTable extends Migration
             $table->string('email')->unique();
             $table->string('password');
             $table->string('phone')->unique();
-            $table->enum('role', ['customer', 'provider'])->default('customer'); 
             $table->enum('gender', ['Male', 'Female']);
             $table->string('os'); 
             $table->date('birthday'); 
