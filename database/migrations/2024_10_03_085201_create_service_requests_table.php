@@ -14,15 +14,7 @@ return new class extends Migration
         Schema::create('service_requests', function (Blueprint $table) {
             $table->id('request_id'); // Auto-incrementing primary key
             $table->unsignedBigInteger('user_id'); // FK to categories
-            $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');// FK to categories  // The user who made the booking
-            
-            $table->unsignedBigInteger('service_id'); // FK to categories
-            $table->foreign('service_id')->references('service_id')->on('services')->onDelete('cascade');// FK to categories// The booked service
-        
-            $table->unsignedBigInteger('provider_id'); // FK to categories
-          $table->foreign('provider_id')->nullable()->references('provider_id')->on('service_providers')->onDelete('cascade');// FK to categories// The booked service
-      
-          // FK to service providers
+            $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
             $table->string('title'); // Title of the service request
             $table->text('description')->nullable(); // Description of the service request
             $table->date('date_of_done')->nullable(); // Date when the service is expected to be done
