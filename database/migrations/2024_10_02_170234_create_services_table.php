@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('title'); // Title of the service
             $table->unsignedBigInteger('category_id'); // FK to categories
             $table->foreign('category_id')->references('category_id')->on('categories')->onDelete('cascade');// FK to categories
+            $table->unsignedBigInteger('provider_id'); // FK to categories
+            $table->foreign('provider_id')->references('provider_id')->on('service_providers')->onDelete('cascade');// FK to categories
             $table->text('description')->nullable(); // Description of the service
             $table->decimal('service_fee', 10, 2); // Base fee for the service
             $table->json('pictures')->nullable(); // Array of base64 encoded images
