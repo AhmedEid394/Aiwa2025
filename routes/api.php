@@ -3,6 +3,10 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ServiceProviderController;
+use App\Http\Controllers\SubCategoryController;
+use App\Http\Controllers\ServiceRequestController;
+use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,6 +28,38 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/profile', [UserController::class, 'show']);
     Route::put('/users/profile', [UserController::class, 'update']);
     Route::delete('/users/profile', [UserController::class, 'destroy']);
+
+    // SubCategory routes
+    Route::post('/subcategories', [SubCategoryController::class, 'store']);
+    Route::get('/subcategories/{id}', [SubCategoryController::class, 'show']);
+    Route::put('/subcategories/{id}', [SubCategoryController::class, 'update']);
+    Route::delete('/subcategories/{id}', [SubCategoryController::class, 'destroy']);
+    Route::get('/subcategories', [SubCategoryController::class, 'index']);
+    Route::get('/subcategories/{id}/services', [SubCategoryController::class, 'services']);
+
+    // ServiceRequest routes
+    Route::post('/service-requests', [ServiceRequestController::class, 'store']);
+    Route::get('/service-requests/{id}', [ServiceRequestController::class, 'show']);
+    Route::put('/service-requests/{id}', [ServiceRequestController::class, 'update']);
+    Route::delete('/service-requests/{id}', [ServiceRequestController::class, 'destroy']);
+    Route::get('/service-requests', [ServiceRequestController::class, 'index']);
+    Route::put('/service-requests/{id}/status', [ServiceRequestController::class, 'updateStatus']);
+
+    // Service routes
+    Route::post('/services', [ServiceController::class, 'store']);
+    Route::get('/services/{id}', [ServiceController::class, 'show']);
+    Route::put('/services/{id}', [ServiceController::class, 'update']);
+    Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
+    Route::get('/services', [ServiceController::class, 'index']);
+    Route::get('/services/search', [ServiceController::class, 'search']);
+
+    // Notification routes
+    Route::post('/notifications', [NotificationController::class, 'store']);
+    Route::get('/notifications/{id}', [NotificationController::class, 'show']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 });
 
 // Service Provider routes
@@ -36,6 +72,3 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/providers/profile', [ServiceProviderController::class, 'update']);
     Route::delete('/providers/profile', [ServiceProviderController::class, 'destroy']);
 });
-
-
-
