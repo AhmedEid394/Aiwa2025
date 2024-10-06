@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ServiceProviderController;
@@ -16,38 +15,27 @@ use App\Http\Controllers\ServiceProviderController;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+// User routes
+Route::post('/users/register', [UserController::class, 'register']);
+Route::post('/users/login', [UserController::class, 'login']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/users/logout', [UserController::class, 'logout']);
+    Route::get('/users/profile', [UserController::class, 'show']);
+    Route::put('/users/profile', [UserController::class, 'update']);
+    Route::delete('/users/profile', [UserController::class, 'destroy']);
+});
+
+// Service Provider routes
+Route::post('/providers/register', [ServiceProviderController::class, 'register']);
+Route::post('/providers/login', [ServiceProviderController::class, 'login']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/providers/logout', [ServiceProviderController::class, 'logout']);
+    Route::get('/providers/profile', [ServiceProviderController::class, 'show']);
+    Route::put('/providers/profile', [ServiceProviderController::class, 'update']);
+    Route::delete('/providers/profile', [ServiceProviderController::class, 'destroy']);
 });
 
 
-// Public routes for users
-Route::prefix('users')->group(function () {
-    Route::post('/register', [UserController::class, 'register']);
-    Route::post('/login', [UserController::class, 'login']);
-});
-
-// Protected routes for authenticated users
-Route::middleware('auth:sanctum')->prefix('users')->group(function () {
-    Route::get('/', [UserController::class, 'index']); // List all users (if needed)
-    Route::get('/logout', [UserController::class, 'logout']);
-    Route::get('/show', [UserController::class, 'show']);
-    Route::put('/update', [UserController::class, 'update']);
-    Route::delete('/destroy', [UserController::class, 'destroy']);
-});
-
-// Public routes for service providers
-Route::prefix('providers')->group(function () {
-    Route::post('/register', [ServiceProviderController::class, 'register']);
-    Route::post('/login', [ServiceProviderController::class, 'login']);
-});
-
-// Protected routes for authenticated service providers
-Route::middleware('auth:sanctum')->prefix('providers')->group(function () {
-    Route::get('/', [ServiceProviderController::class, 'index']); // List all providers (if needed)
-    Route::get('/logout', [ServiceProviderController::class, 'logout']);
-    Route::get('/show', [ServiceProviderController::class, 'show']);
-    Route::put('/update', [ServiceProviderController::class, 'update']);
-    Route::delete('/destroy', [ServiceProviderController::class, 'destroy']);
-});
 
