@@ -18,6 +18,8 @@ return new class extends Migration
         $table->string('name'); // Subcategory name
         $table->longText('image')->nullable(); // Image for the subcategory
         $table->text('description')->nullable(); // Description of the subcategory
+        $table->unsignedBigInteger('parent_id')->nullable(); // Define parent_id as unsignedBigInteger
+        $table->foreign('parent_id')->references('sub_category_id')->on('sub_categories')->onDelete('cascade'); // Define foreign key constraint
         $table->timestamps(); // Timestamps for created_at and updated_at
     });
     }

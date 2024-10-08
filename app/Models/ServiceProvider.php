@@ -22,6 +22,8 @@ class ServiceProvider extends Model
         'date_of_birth',
         'nationality',
         'gender',
+        'profile_photo',
+        'service_category_id',
         'tax_record',
         'company_name',
         'id_number',
@@ -41,4 +43,10 @@ class ServiceProvider extends Model
     {
         return $this->hasMany(Service::class, 'provider_id');
     }
+
+    public function SubCategory()
+    {
+        return $this->belongsTo(SubCategory::class, 'service_category_id');
+    }
+    
 }

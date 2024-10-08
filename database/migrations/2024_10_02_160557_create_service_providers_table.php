@@ -18,6 +18,9 @@ class CreateServiceProvidersTable extends Migration
             $table->date('date_of_birth'); 
             $table->enum('nationality', ['Egyptian', 'Foreigner']);
             $table->enum('gender', ['Male', 'Female']);
+            $table->longText('profile_photo')->nullable();
+            $table->unsignedBigInteger('service_category_id')->nullable(); // FK to categories
+            $table->foreign('service_category_id')->references('sub_category_id')->on('sub_categories')->onDelete('cascade');
             $table->string('tax_record')->nullable();
             $table->string('company_name')->nullable();
             $table->string('id_number')->nullable();

@@ -16,6 +16,7 @@ class SubCategoryController extends Controller
                 'name' => 'required|string|max:255',
                 'image' => 'nullable|string',
                 'description' => 'nullable|string',
+                'parent_id' => 'nullable|exists:sub_categories,sub_category_id',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
@@ -48,6 +49,7 @@ class SubCategoryController extends Controller
                 'name' => 'sometimes|string|max:255',
                 'image' => 'nullable|string',
                 'description' => 'nullable|string',
+                'parent_id' => 'nullable|exists:sub_categories,sub_category_id',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);

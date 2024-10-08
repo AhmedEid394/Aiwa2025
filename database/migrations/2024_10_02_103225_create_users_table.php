@@ -11,6 +11,7 @@ class CreateUsersTable extends Migration
             $table->id('user_id');
             $table->string('f_name'); 
             $table->string('l_name'); 
+            $table->enum('role', ['admin', 'user']);
             $table->string('email')->unique();
             $table->string('password');
             $table->string('phone')->unique();
@@ -19,7 +20,6 @@ class CreateUsersTable extends Migration
             $table->date('birthday'); 
             $table->string('nationality'); 
             $table->string('profile_photo')->nullable();
-            $table->string('address');
             $table->timestamps();
         });
     }

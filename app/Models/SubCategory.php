@@ -13,6 +13,7 @@ class SubCategory extends Model
         'name',
         'image',
         'description',
+        'parent_id',
     ];
 
     public function category()
@@ -23,5 +24,13 @@ class SubCategory extends Model
     public function services()
     {
         return $this->hasMany(Service::class, 'sub_category_id');
+    }
+    public function subCategories()
+    {
+        return $this->hasMany(SubCategory::class, 'parent_id');
+    }
+    public function parent()
+    {
+        return $this->belongsTo(SubCategory::class, 'parent_id');
     }
 }
