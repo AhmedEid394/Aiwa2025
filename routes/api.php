@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ServiceProviderController;
 use App\Http\Controllers\SubCategoryController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ServiceRequestController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\NotificationController;
@@ -28,6 +29,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/profile', [UserController::class, 'show']);
     Route::put('/users/profile', [UserController::class, 'update']);
     Route::delete('/users/profile', [UserController::class, 'destroy']);
+
+    //Category routes
+    Route::post('/categories', [CategoryController::class, 'store']);
+    Route::get('/categories/{id}', [CategoryController::class, 'show']);
+    Route::put('/categories/{id}', [CategoryController::class, 'update']);
+    Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
+    Route::get('/categories', [CategoryController::class, 'index']);
 
     // SubCategory routes
     Route::post('/subcategories', [SubCategoryController::class, 'store']);
