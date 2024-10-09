@@ -48,5 +48,13 @@ class ServiceProvider extends Model
     {
         return $this->belongsTo(SubCategory::class, 'service_category_id');
     }
+
+    public function promoCodes(){
+        return $this->hasMany(PromoCode::class, 'provider_id');
+    }
+    public function papers()
+    {
+        return $this->hasMany(Paper::class, 'provider_id');
+    }
     
 }
