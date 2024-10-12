@@ -16,15 +16,15 @@ class User extends Authenticatable
     protected $fillable = [
         'f_name',
         'l_name',
-        'role',
         'email',
         'password',
         'phone',
         'gender',
         'os',
         'birthday',
-        'nationality',
         'profile_photo',
+        'country',
+        'maxDistance',
     ];
 
     protected $hidden = [
@@ -56,6 +56,6 @@ class User extends Authenticatable
     }
     public function userPermissions()
     {
-        return $this->hasMany(UserPermission::class);
+        return $this->hasMany(UserPermission::class, 'user_id');
     }
 }

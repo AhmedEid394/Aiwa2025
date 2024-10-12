@@ -19,11 +19,11 @@ class ServiceProvider extends Model
         'email',
         'phone',
         'provider_type',
-        'date_of_birth',
+        'birthday',
         'nationality',
         'gender',
         'profile_photo',
-        'service_category_id',
+        'sub_category_id',
         'tax_record',
         'company_name',
         'id_number',
@@ -38,7 +38,7 @@ class ServiceProvider extends Model
     protected $casts = [
         'date_of_birth' => 'date',
     ];
-   
+
     public function Service()
     {
         return $this->hasMany(Service::class, 'provider_id');
@@ -46,7 +46,7 @@ class ServiceProvider extends Model
 
     public function SubCategory()
     {
-        return $this->belongsTo(SubCategory::class, 'service_category_id');
+        return $this->belongsTo(SubCategory::class, 'sub_category_id');
     }
     
 }

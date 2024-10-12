@@ -12,10 +12,10 @@ return new class extends Migration
     public function up(): void
     {
       Schema::create('permission_types', function (Blueprint $table) {
-        $table->id('permission_type_id'); // Primary key
-        $table->string('name')->unique(); // Name of the permission type (e.g., 'access_location', 'access_files')
-        $table->string('description')->nullable(); // Description of the permission type
-        $table->timestamps(); // Created and updated timestamps
+        $table->id('permission_type_id'); 
+        $table->string('name')->unique(); 
+        $table->string('description')->nullable(); 
+        $table->timestamps(); 
     });
 
   }

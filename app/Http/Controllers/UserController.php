@@ -16,14 +16,14 @@ class UserController extends Controller
             $validatedData = $request->validate([
                 'f_name' => 'required|string|max:255',
                 'l_name' => 'required|string|max:255',
-                'role'=>'required|in:admin,user',
                 'email' => 'required|string|email|max:255|unique:users',
                 'phone' => 'required|string|unique:users',
-                'gender' => 'required|in:Male,Female',
+                'gender' => 'required|in:male,female',
                 'os' => 'required|string',
                 'birthday' => 'required|date',
-                'nationality' => 'required|string',
                 'profile_photo' => 'nullable|string',
+                'country' => 'nullable|string',
+                'maxDistance' => 'nullable|integer',
                 'password' => 'required|string|min:8',
             ]);
         } catch (ValidationException $e) {
@@ -31,13 +31,15 @@ class UserController extends Controller
         }
 
         $validatedData['password'] = Hash::make($validatedData['password']);
+        $validatedData['country'] = null; 
+        $validatedData['maxDistance'] = 20; 
+
         $user = User::create($validatedData);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json(['token' => $token, 'user' => $user], 201);
     }
-
 
     public function login(Request $request)
     {
@@ -97,14 +99,14 @@ class UserController extends Controller
             $validatedData = $request->validate([
                 'f_name' => 'sometimes|string|max:255',
                 'l_name' => 'sometimes|string|max:255',
-                'role'=>'sometimes|in:admin,user',
                 'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->user_id . ',user_id',
                 'phone' => 'sometimes|string|unique:users,phone,' . $user->user_id . ',user_id',
-                'gender' => 'sometimes|in:Male,Female',
+                'gender' => 'sometimes|in:male,female',
                 'os' => 'sometimes|string',
                 'birthday' => 'sometimes|date',
-                'nationality' => 'sometimes|string',
                 'profile_photo' => 'nullable|string',
+                'country' => 'nullable|string',
+                'maxDistance' => 'nullable|integer',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
