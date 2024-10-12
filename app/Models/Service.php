@@ -49,5 +49,8 @@ class Service extends Model
     {
         return $this->hasMany(Favourite::class, 'service_id');
     }
+    public function promoCodes(){
+      return $this->hasMany(PromoCode::class, 'service_id');
+  }
 
 }

@@ -58,4 +58,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserPermission::class, 'user_id');
     }
-}
+    public function addresses()
+    {
+        return $this->hasMany(Address::class);
+    }
+    public function papers()
+    {
+        return $this->hasMany(Paper::class, 'user_id');
+    }
+  }
