@@ -56,5 +56,10 @@ class ServiceProvider extends Model
     {
         return $this->hasMany(Paper::class, 'provider_id');
     }
+
+    public function chats()
+    {
+        return $this->hasMany(Chat::class, 'provider_id');
+    }
     
 }

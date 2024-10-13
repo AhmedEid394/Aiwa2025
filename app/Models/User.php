@@ -66,4 +66,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Paper::class, 'user_id');
     }
+
+    public function chats()
+    {
+        return $this->hasMany(Chat::class, 'user_id');
+    }
   }

@@ -8,6 +8,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ServiceRequestController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ChatController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,6 +20,9 @@ use App\Http\Controllers\NotificationController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+Route::post('/chat', [ChatController::class, 'startChat']);
+Route::post('/chat/{chatId}/message', [ChatController::class, 'sendMessage']);
+Route::get('/chat/{chatId}/messages', [ChatController::class, 'getMessages']);
 
 // User routes
 Route::post('/users/register', [UserController::class, 'register']);
