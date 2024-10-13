@@ -67,7 +67,7 @@ class ServiceController extends Controller
 
         $service->update($validatedData);
 
-        return response()->json($service,201);
+        return response()->json($service, 201);
     }
 
     public function destroy($id)
@@ -102,9 +102,9 @@ class ServiceController extends Controller
 
         if ($request->has('keyword')) {
             $keyword = $request->keyword;
-            $query->where(function($q) use ($keyword) {
+            $query->where(function ($q) use ($keyword) {
                 $q->where('title', 'LIKE', "%{$keyword}%")
-                  ->orWhere('description', 'LIKE', "%{$keyword}%");
+                    ->orWhere('description', 'LIKE', "%{$keyword}%");
             });
         }
 

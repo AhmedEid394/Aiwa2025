@@ -15,12 +15,12 @@ class CreateServiceProvidersTable extends Migration
             $table->string('email')->unique(); 
             $table->string('phone')->unique(); 
             $table->enum('provider_type', ['freelance', 'corporate']); 
-            $table->date('date_of_birth'); 
-            $table->enum('nationality', ['Egyptian', 'Foreigner']);
-            $table->enum('gender', ['Male', 'Female']);
+            $table->date('birthday'); 
+            $table->enum('nationality', ['egyptian', 'foreigner']);
+            $table->enum('gender', ['male', 'female']);
             $table->longText('profile_photo')->nullable();
-            $table->unsignedBigInteger('service_category_id')->nullable(); // FK to categories
-            $table->foreign('service_category_id')->references('sub_category_id')->on('sub_categories')->onDelete('cascade');
+            $table->unsignedBigInteger('sub_category_id')->nullable();
+            $table->foreign('sub_category_id')->references('sub_category_id')->on('sub_categories')->onDelete('cascade');
             $table->string('tax_record')->nullable();
             $table->string('company_name')->nullable();
             $table->string('id_number')->nullable();

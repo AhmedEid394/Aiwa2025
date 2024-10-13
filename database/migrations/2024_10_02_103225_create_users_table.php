@@ -11,15 +11,15 @@ class CreateUsersTable extends Migration
             $table->id('user_id');
             $table->string('f_name'); 
             $table->string('l_name'); 
-            $table->enum('role', ['admin', 'user']);
             $table->string('email')->unique();
             $table->string('password');
             $table->string('phone')->unique();
-            $table->enum('gender', ['Male', 'Female']);
+            $table->enum('gender', ['male', 'female']);
             $table->string('os'); 
             $table->date('birthday'); 
-            $table->string('nationality'); 
-            $table->string('profile_photo')->nullable();
+            $table->longText('profile_photo')->nullable();
+            $table->string('country')->nullable(); 
+            $table->integer('maxDistance')->nullable(); 
             $table->timestamps();
         });
     }

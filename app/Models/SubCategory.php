@@ -4,8 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+
 class SubCategory extends Model
 {
+    
     protected $primaryKey = 'sub_category_id';
 
     protected $fillable = [
@@ -26,9 +28,9 @@ class SubCategory extends Model
         return $this->hasMany(Service::class, 'sub_category_id');
     }
     
-    public function serviceCategories()
+    public function ServiceProvider()
     {
-        return $this->hasMany(ServiceCategory::class, 'sub_category_id');
+        return $this->hasMany(ServiceProvider::class, 'sub_category_id');
     }
   
     public function parent()
