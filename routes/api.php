@@ -20,9 +20,10 @@ use App\Http\Controllers\ChatController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
-Route::post('/chat', [ChatController::class, 'startChat']);
-Route::post('/chat/{chatId}/message', [ChatController::class, 'sendMessage']);
-Route::get('/chat/{chatId}/messages', [ChatController::class, 'getMessages']);
+// Route::post('/chat', [ChatController::class, 'startChat']);
+// Route::post('/chat/{chatId}/message', [ChatController::class, 'sendMessage']);
+// Route::get('/chat/{chatId}/messages', [ChatController::class, 'getMessages']);
+
 
 // User routes
 Route::post('/users/register', [UserController::class, 'register']);
@@ -33,6 +34,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/profile', [UserController::class, 'show']);
     Route::put('/users/profile', [UserController::class, 'update']);
     Route::delete('/users/profile', [UserController::class, 'destroy']);
+
+
 
     //Category routes
     Route::post('/categories', [CategoryController::class, 'store']);
@@ -72,6 +75,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    
+    //Chat route
+    Route::post('/chat', [ChatController::class, 'startChat']);
+    Route::post('/chat/{chatId}/message', [ChatController::class, 'sendMessage']);
+    Route::get('/chat/{chatId}/messages', [ChatController::class, 'getMessages']);
+   
 });
 
 // Service Provider routes
@@ -84,3 +93,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/providers/profile', [ServiceProviderController::class, 'update']);
     Route::delete('/providers/profile', [ServiceProviderController::class, 'destroy']);
 });
+

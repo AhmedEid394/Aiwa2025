@@ -5,14 +5,30 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Chat;
 use App\Models\Message;
+use Illuminate\Validation\ValidationException;
+use App\Models\ServiceProvider;
+use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
+
+
+
 
 class ChatController extends Controller
 {
   public function startChat(Request $request)
     {
+        try {
+            $request->validate([
+                'user_id' => 'required|exists:users,user_id', // Ensure user_id is required and exists in the users table
+                'provider_id' => 'required|exists:service_providers,provider_id', // Ensure provider_id is required and exists in the service_providers table
+            ]);
+    } catch (ValidationException $e) {
+        return response()->json(['errors' => $e->errors()], 422);
+    }
+
+
         $chat = Chat::firstOrCreate([
             'user_id' => $request->user_id,
             'provider_id' => $request->provider_id,
@@ -23,42 +39,74 @@ class ChatController extends Controller
 
     public function sendMessage(Request $request, $chatId)
     {
-        try {
-            $request->validate([
-                'message' => 'nullable|required|string',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-                'sender_type' => 'required|string|in:user,provider',
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json(['errors' => $e->errors()], 422);
+        // Validate incoming request
+        $request->validate([
+            'message' => 'required|string',
+            'file' => 'nullable|file|max:2048',
+        ]);
+    
+        $filePath = null; // Initialize filePath to null
+    
+        // Check if a file is present
+        if ($request->hasFile('file')) {
+            // Use any method to store the file, e.g., move() or store()
+            $file = $request->file('file');
+            $filename = time() . '_' . $file->getClientOriginalName(); // Create a unique filename
+            $filePath = 'chat_files/' . $filename; // Define the path
+    
+            // Move the file to the specified directory
+            $file->move(public_path('storage/' . $filePath)); // Move the file
         }
-
-        $imagePath = null;
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('chat_images', 'public');  // Store in 'storage/app/public'
-            Log::info('Image uploaded to: ' . $imagePath);  // Log the upload path
+    
+        // Get the authenticated user
+        $user = $request->user(); 
+    
+        // Determine sender type based on user instance
+        if ($user instanceof ServiceProvider) {
+            $senderType = 'Provider';
+            $senderId = $user->id;
+        } elseif ($user instanceof User) {
+            $senderType = 'user';
+            $senderId = $user->id;
         } else {
-            Log::info('No image uploaded');
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
-
+    
+        // Create the message
         $message = Message::create([
             'chat_id' => $chatId,
             'message' => $request->message,
-            'image' => $imagePath,
-            'sender_type' => $request->sender_type, // 'user' or 'provider'
+            'file' => $filePath, // This will be null if no file was uploaded
+            'sender_type' => $senderType,
+            'sender_id' => $senderId,
         ]);
-        $imageUrl = $imagePath ? Storage::url($imagePath) : null;
-        Log::info('Image URL: ' . $imageUrl);  // Log the URL being sent in response
     
+        // Broadcast the message
         broadcast(new \App\Events\MessageSent($message))->toOthers();
-
-        return response()->json($message, 201);
+    
+        // Return response with the created message and file path
+        return response()->json([
+            'message' => $message,
+            'file_path' => $filePath, // Will be null if no file was uploaded
+        ], 201);
     }
+    
+    
+    
+    
+    
+    
 
     public function getMessages($chatId)
     {
-        $messages = Message::where('chat_id', $chatId)->orderBy('created_at')->get();
+        $chat = Chat::find($chatId);
+    
+        if (!$chat) {
+            return response()->json(['error' => 'Chat not found'], 404);
+        }
+            $messages = Message::where('chat_id', $chatId)->orderBy('created_at')->get();
         return response()->json($messages);
     }
+    
 
 }
