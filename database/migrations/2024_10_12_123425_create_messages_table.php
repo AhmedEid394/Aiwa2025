@@ -16,8 +16,9 @@ return new class extends Migration
             $table->unsignedBigInteger('chat_id');
             $table->foreign('chat_id')->references('chat_id')->on('chats')->onDelete('cascade');
             $table->text('message')->nullable();
-            $table->longText('image')->nullable();
+            $table->longText('file')->nullable();
             $table->enum('sender_type', ['user', 'provider']);
+            $table->unsignedBigInteger('sender_id');
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
         });

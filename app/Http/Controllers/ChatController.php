@@ -41,33 +41,32 @@ class ChatController extends Controller
     {
         // Validate incoming request
         $request->validate([
-            'message' => 'required|string',
+            'message' => 'nullable|string',
             'file' => 'nullable|file|max:2048',
         ]);
     
-        $filePath = null; // Initialize filePath to null
+        $fileEncoded = null; // Initialize fileEncoded to null
     
         // Check if a file is present
         if ($request->hasFile('file')) {
-            // Use any method to store the file, e.g., move() or store()
+            // Get the uploaded file
             $file = $request->file('file');
-            $filename = time() . '_' . $file->getClientOriginalName(); // Create a unique filename
-            $filePath = 'chat_files/' . $filename; // Define the path
     
-            // Move the file to the specified directory
-            $file->move(public_path('storage/' . $filePath)); // Move the file
+            // Read the file's contents and encode it to Base64
+            $fileContents = file_get_contents($file->getRealPath());
+            $fileEncoded = base64_encode($fileContents);
         }
     
         // Get the authenticated user
-        $user = $request->user(); 
+        $user = auth()->user();
     
         // Determine sender type based on user instance
         if ($user instanceof ServiceProvider) {
             $senderType = 'Provider';
-            $senderId = $user->id;
+            $senderId = $user->provider_id; // Use `provider_id` for providers
         } elseif ($user instanceof User) {
             $senderType = 'user';
-            $senderId = $user->id;
+            $senderId = $user->user_id; // Use `user_id` for users
         } else {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
@@ -76,7 +75,7 @@ class ChatController extends Controller
         $message = Message::create([
             'chat_id' => $chatId,
             'message' => $request->message,
-            'file' => $filePath, // This will be null if no file was uploaded
+            'file' => $fileEncoded, // Store the Base64 encoded file
             'sender_type' => $senderType,
             'sender_id' => $senderId,
         ]);
@@ -84,12 +83,13 @@ class ChatController extends Controller
         // Broadcast the message
         broadcast(new \App\Events\MessageSent($message))->toOthers();
     
-        // Return response with the created message and file path
+        // Return response with the created message and file
         return response()->json([
             'message' => $message,
-            'file_path' => $filePath, // Will be null if no file was uploaded
+            'file' => $fileEncoded, // Return the encoded file (if uploaded)
         ], 201);
     }
+    
     
     
     
@@ -104,9 +104,54 @@ class ChatController extends Controller
         if (!$chat) {
             return response()->json(['error' => 'Chat not found'], 404);
         }
-            $messages = Message::where('chat_id', $chatId)->orderBy('created_at')->get();
-        return response()->json($messages);
+    
+        $messages = Message::where('chat_id', $chatId)->orderBy('created_at')->get();
+    
+        foreach ($messages as $message) {
+            // Only decode the file if it exists
+            if ($message->file) {
+                $message->file = 'data:application/octet-stream;base64,' . $message->file; // Adjust MIME type as needed
+            }
+        }
+    
+        return response()->json(['messages' => $messages], 200);
     }
     
+    
+    
+    public function deleteMessage(Request $request, $messageId)
+    {
+        // Find the message by its ID
+        $message = Message::find($messageId);
+    
+        // Check if the message exists
+        if (!$message) {
+            return response()->json(['error' => 'Message not found'], 404);
+        }
+    
+        // Get the authenticated user (or service provider)
+        $user = $request->user(); 
+        // Determine if the authenticated user is allowed to delete the message
+        $isAuthorized = 
+            ($message->sender_type === 'user' && $user instanceof User && $message->sender_id === $user->user_id) ||
+            ($message->sender_type === 'Provider' && $user instanceof ServiceProvider && $message->sender_id === $user->provider_id);
+    
+        // Check if the user is authorized to delete the message
+        if (!$isAuthorized) {
+            return response()->json(['error' => 'Unauthorized to delete this message'], 403);
+        }
+    
+        // Attempt to delete the message file if it exists
+        if ($message->file && Storage::disk('public')->exists($message->file)) {
+            Storage::disk('public')->delete($message->file);
+        }
+    
+        // Delete the message
+        $message->delete();
+    
+        return response()->json(['message' => 'Message deleted successfully'], 200);
+    }
+    
+
 
 }

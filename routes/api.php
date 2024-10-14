@@ -80,6 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/chat', [ChatController::class, 'startChat']);
     Route::post('/chat/{chatId}/message', [ChatController::class, 'sendMessage']);
     Route::get('/chat/{chatId}/messages', [ChatController::class, 'getMessages']);
+    Route::delete('/chat/{messageId}', [ChatController::class, 'deleteMessage']);
    
 });
 
