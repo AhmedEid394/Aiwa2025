@@ -12,7 +12,8 @@ class CreateCategoryImagesTable extends Migration
             $table->id('category_image_id');
             $table->unsignedBigInteger('category_id');
             $table->foreign('category_id')->references('category_id')->on('categories')->onDelete('cascade');
-            $table->string('image_path');
+            $table->longText('image_path')->nullable();
+            $table->string('alt_text')->nullable();
             $table->timestamps();
 
         });
