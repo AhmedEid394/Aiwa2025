@@ -13,13 +13,13 @@ use Illuminate\Support\Facades\Schema;
     {
     
           Schema::create('user_permissions', function (Blueprint $table) {
-              $table->id(); // Primary key
-              $table->unsignedBigInteger('user_id'); // FK to users
-              $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
-              $table->unsignedBigInteger('permission_type_id'); // FK to users
+              $table->id('user_permission_id'); // Primary key
+              $table->enum('user_type', ['user', 'provider']);
+              $table->unsignedBigInteger('user_id');
+              $table->unsignedBigInteger('permission_type_id'); 
               $table->foreign('permission_type_id')->references('permission_type_id')->on('permission_types')->onDelete('cascade');
-              $table->boolean('is_allowed')->default(false); // Whether the permission is granted
-              $table->timestamps(); // Created and updated timestamps
+              $table->boolean('is_allowed')->default(false); 
+              $table->timestamps();
           });
       
     }
