@@ -59,7 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/services/{id}', [ServiceController::class, 'update']);
     Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
     Route::get('/services', [ServiceController::class, 'index']);
-    Route::get('/services/search', [ServiceController::class, 'search']);
+    Route::post('/services/search', [ServiceController::class, 'search']);
 
     // Notification routes
     Route::post('/notifications', [NotificationController::class, 'store']);

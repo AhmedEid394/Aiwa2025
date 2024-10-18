@@ -25,6 +25,6 @@ class Address extends Model
      */
     public function provider()
     {
-        return $this->belongsTo(Provider::class, 'provider_id');
+        return $this->belongsTo(ServiceProvider::class, 'provider_id');
     }
 }
