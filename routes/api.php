@@ -8,6 +8,11 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ServiceRequestController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\FavouriteController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\PermissionTypeController;
+use App\Http\Controllers\UserPermissionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,6 +25,7 @@ use App\Http\Controllers\NotificationController;
 |
 */
 
+
 // User routes
 Route::post('/users/register', [UserController::class, 'register']);
 Route::post('/users/login', [UserController::class, 'login']);
@@ -29,6 +35,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/profile', [UserController::class, 'show']);
     Route::put('/users/profile', [UserController::class, 'update']);
     Route::delete('/users/profile', [UserController::class, 'destroy']);
+
+
 
     //Category routes
     Route::post('/categories', [CategoryController::class, 'store']);
@@ -68,6 +76,36 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+
+    // Booking routes
+    Route::post('/bookings', [BookingController::class, 'store']);
+    Route::get('/bookings/{id}', [BookingController::class, 'show']);
+    Route::put('/bookings/{id}', [BookingController::class, 'update']);
+    Route::delete('/bookings/{id}', [BookingController::class, 'destroy']);
+    Route::get('/bookings', [BookingController::class, 'index']);
+
+    // Favourite routes
+    Route::get('/favourites', [FavouriteController::class, 'index']);
+    Route::get('/favourites/{id}', [FavouriteController::class, 'show']);
+    Route::post('/favourites/toggle', [FavouriteController::class, 'toggle']);
+
+    //Chat route
+    Route::post('/chat', [ChatController::class, 'startChat']);
+    Route::post('/chat/{chatId}/message', [ChatController::class, 'sendMessage']);
+    Route::get('/chat/{chatId}/messages', [ChatController::class, 'getMessages']);
+    Route::delete('/chat/{messageId}', [ChatController::class, 'deleteMessage']);
+
+    //PermissionType routes
+    Route::post('/permission-types', [PermissionTypeController::class, 'store']);
+    Route::get('/permission-types/{id}', [PermissionTypeController::class, 'show']);
+    Route::put('/permission-types/{id}', [PermissionTypeController::class, 'update']);
+    Route::delete('/permission-types/{id}', [PermissionTypeController::class, 'destroy']);
+    Route::get('/permission-types', [PermissionTypeController::class, 'index']);
+
+    //UserPermission routes
+    Route::post('/user-permissions', [UserPermissionController::class, 'store']);
+    Route::get('/user-permissions', [UserPermissionController::class, 'index']);
+   
 });
 
 // Service Provider routes
@@ -80,3 +118,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/providers/profile', [ServiceProviderController::class, 'update']);
     Route::delete('/providers/profile', [ServiceProviderController::class, 'destroy']);
 });
+
