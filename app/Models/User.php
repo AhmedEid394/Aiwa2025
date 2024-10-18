@@ -54,10 +54,7 @@ class User extends Authenticatable
     {
         return $this->hasMany(ServiceRequest::class, 'user_id');
     }
-    public function userPermissions()
-    {
-        return $this->hasMany(UserPermission::class, 'user_id');
-    }
+  
     public function addresses()
     {
         return $this->hasMany(Address::class);
