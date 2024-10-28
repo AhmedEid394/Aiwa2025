@@ -22,6 +22,11 @@ class ServiceController extends Controller
                 'sale_amount' => 'nullable|numeric|min:0',
                 'sale_percentage' => 'nullable|numeric|min:0|max:100',
                 'down_payment' => 'nullable|numeric|min:0',
+                'latitude' => 'required|numeric',
+                'longitude' => 'required|numeric',
+                'building' => 'required|string',
+                'apartment' => 'required|string',
+                'location_mark' => 'required|string',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
@@ -38,7 +43,7 @@ class ServiceController extends Controller
         if (!$service) {
             return response()->json(['error' => 'Service not found'], 404);
         }
-        return response()->json($service, 201);
+        return response()->json($service, 200);
     }
 
     public function update(Request $request, $id)
@@ -60,6 +65,11 @@ class ServiceController extends Controller
                 'sale_amount' => 'nullable|numeric|min:0',
                 'sale_percentage' => 'nullable|numeric|min:0|max:100',
                 'down_payment' => 'nullable|numeric|min:0',
+                'latitude' => 'sometimes|numeric',
+                'longitude' => 'sometimes|numeric',
+                'building' => 'sometimes|string',
+                'apartment' => 'sometimes|string',
+                'location_mark' => 'sometimes|string',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
@@ -67,7 +77,7 @@ class ServiceController extends Controller
 
         $service->update($validatedData);
 
-        return response()->json($service, 201);
+        return response()->json($service, 200);
     }
 
     public function destroy($id)
@@ -77,7 +87,7 @@ class ServiceController extends Controller
             return response()->json(['error' => 'Service not found'], 404);
         }
         $service->delete();
-        return response()->json(null, 201);
+        return response()->json(null, 204);
     }
 
     public function index(Request $request)
@@ -114,6 +124,14 @@ class ServiceController extends Controller
 
         if ($request->has('max_price')) {
             $query->where('service_fee', '<=', $request->max_price);
+        }
+
+        if ($request->has('latitude') && $request->has('longitude') && $request->has('radius')) {
+            $lat = $request->latitude;
+            $lon = $request->longitude;
+            $radius = $request->radius;
+
+            $query->whereRaw("(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) < ?", [$lat, $lon, $lat, $radius]);
         }
 
         $services = $query->with(['SubCategory', 'Provider'])->paginate(15);

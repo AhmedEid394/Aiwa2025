@@ -11,8 +11,12 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\FavouriteController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\Controller;
 use App\Http\Controllers\PermissionTypeController;
 use App\Http\Controllers\UserPermissionController;
+use App\Http\Controllers\BankController;
+use App\Http\Controllers\BmCashoutPrepareController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -29,6 +33,9 @@ use App\Http\Controllers\UserPermissionController;
 // User routes
 Route::post('/users/register', [UserController::class, 'register']);
 Route::post('/users/login', [UserController::class, 'login']);
+Route::post('/login', [Controller::class, 'login']);
+Route::post('bank-misr/prepare-transaction', [BmCashoutPrepareController::class, 'generateSignAndSendTransaction']);
+
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/logout', [UserController::class, 'logout']);
@@ -37,8 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/users/profile', [UserController::class, 'destroy']);
 
 
-
-    //Category routes
+    // Category routes
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::get('/categories/{id}', [CategoryController::class, 'show']);
     Route::put('/categories/{id}', [CategoryController::class, 'update']);
@@ -89,23 +95,36 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/favourites/{id}', [FavouriteController::class, 'show']);
     Route::post('/favourites/toggle', [FavouriteController::class, 'toggle']);
 
-    //Chat route
+    // Chat route
     Route::post('/chat', [ChatController::class, 'startChat']);
+    Route::get('/chat/check', [ChatController::class, 'checkChatExists']);
     Route::post('/chat/{chatId}/message', [ChatController::class, 'sendMessage']);
     Route::get('/chat/{chatId}/messages', [ChatController::class, 'getMessages']);
     Route::delete('/chat/{messageId}', [ChatController::class, 'deleteMessage']);
 
-    //PermissionType routes
+    // PermissionType routes
     Route::post('/permission-types', [PermissionTypeController::class, 'store']);
     Route::get('/permission-types/{id}', [PermissionTypeController::class, 'show']);
     Route::put('/permission-types/{id}', [PermissionTypeController::class, 'update']);
     Route::delete('/permission-types/{id}', [PermissionTypeController::class, 'destroy']);
     Route::get('/permission-types', [PermissionTypeController::class, 'index']);
 
-    //UserPermission routes
+    // UserPermission routes
     Route::post('/user-permissions', [UserPermissionController::class, 'store']);
     Route::get('/user-permissions', [UserPermissionController::class, 'index']);
-   
+
+    // Banks routes
+    Route::get('/banks', [BankController::class, 'index']);
+    Route::get('/wallets', [BankController::class, 'getWallets']);
+    Route::get('/banks-only', [BankController::class, 'getBanks']);
+    Route::post('/banks', [BankController::class, 'store']);
+    Route::get('/banks/{id}', [BankController::class, 'show']);
+    Route::put('/banks/{id}', [BankController::class, 'update']);
+    Route::delete('/banks/{id}', [BankController::class, 'destroy']);
+
+    // Cashout routes
+    Route::get('bank-misr/transactions', [BmCashoutPrepareController::class, 'index']);
+    Route::get('bank-misr/transactions/{id}', [BmCashoutPrepareController::class, 'show']);
 });
 
 // Service Provider routes
@@ -118,4 +137,3 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/providers/profile', [ServiceProviderController::class, 'update']);
     Route::delete('/providers/profile', [ServiceProviderController::class, 'destroy']);
 });
-

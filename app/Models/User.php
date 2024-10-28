@@ -35,10 +35,6 @@ class User extends Authenticatable
         'birthday' => 'date',
     ];
 
-    public function bookings()
-    {
-        return $this->hasMany(Booking::class, 'user_id');
-    }
 
     public function favourites()
     {
