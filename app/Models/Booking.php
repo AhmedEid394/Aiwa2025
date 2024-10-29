@@ -9,19 +9,21 @@ class Booking extends Model
     protected $primaryKey = 'booking_id';
 
     protected $fillable = [
-        'user_id',
+        'user_type',
+        'user_id' ,
         'service_id',
         'add_ons',
-        'location',
-        'building_number',
-        'apartment',
-        'location_mark',
-        'booking_date',
-        'booking_time',
-        'service_price',
-        'total_price',
-        'promo_code',
-        'status',
+        'building_number' ,
+        'apartment' ,
+        'location_mark' ,
+        'latitude',
+        'longitude' ,
+        'booking_date' ,
+        'booking_time' ,
+        'service_price' ,
+        'total_price' ,
+        'promo_code' ,
+        'status' ,
     ];
 
     protected $casts = [
@@ -31,11 +33,6 @@ class Booking extends Model
         'service_price' => 'decimal:2',
         'total_price' => 'decimal:2',
     ];
-
-    public function user()
-    {
-        return $this->belongsTo(User::class, 'user_id');
-    }
 
     public function service()
     {

@@ -9,16 +9,21 @@ class Service extends Model
     protected $primaryKey = 'service_id';
 
     protected $fillable = [
-        'title',
-        'sub_category_id',
-        'provider_id',
-        'description',
-        'service_fee',
-        'pictures',
-        'add_ons',
-        'sale_amount',
-        'sale_percentage',
-        'down_payment',
+                'title' ,
+                'sub_category_id',
+                'provider_id' ,
+                'description' ,
+                'service_fee' ,
+                'pictures' ,
+                'add_ons' ,
+                'sale_amount',
+                'sale_percentage' ,
+                'down_payment' ,
+                'latitude' ,
+                'longitude' ,
+                'building' ,
+                'apartment',
+                'location_mark' ,
     ];
 
     protected $casts = [

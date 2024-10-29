@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use Illuminate\Http\Request;
+use App\Models\ServiceProvider;
+use App\Models\User;
 use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
@@ -12,22 +14,34 @@ class BookingController extends Controller
     {
         try {
             $validatedData = $request->validate([
-                'user_id' => 'required|exists:users,user_id',
                 'service_id' => 'required|exists:services,service_id',
                 'add_ons' => 'nullable|array',
-                'location' => 'required|string',
                 'building_number' => 'required|string',
-                'apartment' => 'nullable|string',
-                'location_mark' => 'nullable|string',
+                'apartment' => 'required|string',
+                'location_mark' => 'required|string',
+                'latitude' => 'required|numeric',
+                'longitude' => 'required|numeric',
                 'booking_date' => 'required|date',
                 'booking_time' => 'required|date_format:H:i',
                 'service_price' => 'required|numeric|min:0',
                 'total_price' => 'required|numeric|min:0',
                 'promo_code' => 'nullable|string',
-                'status' => 'required|in:pending,confirmed,completed,cancelled',
+                'status' => 'required|in:request,accepted,rejected,done',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
+        }
+        
+        $user = auth()->user();
+
+        if ($user instanceof ServiceProvider) {
+            $validatedData['user_type'] = 'Provider';
+            $validatedData['user_id'] = $user->provider_id;
+        } elseif ($user instanceof User) {
+            $validatedData['user_type'] = 'user';
+            $validatedData['user_id'] = $user->user_id;
+        } else {
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
 
         $booking = Booking::create($validatedData);
@@ -37,11 +51,20 @@ class BookingController extends Controller
 
     public function show($id)
     {
-        $booking = Booking::with(['user', 'service'])->find($id);
+        $booking = Booking::find($id);
         if (!$booking) {
             return response()->json(['error' => 'Booking not found'], 404);
         }
-        return response()->json($booking, 201);
+
+        // Load the appropriate relationship based on user_type
+        if ($booking->user_type === 'user') {
+            $booking->load('user');
+        } else {
+            $booking->load('provider');
+        }
+        $booking->load('service');
+
+        return response()->json($booking, 200);
     }
 
     public function update(Request $request, $id)
@@ -54,16 +77,17 @@ class BookingController extends Controller
         try {
             $validatedData = $request->validate([
                 'add_ons' => 'nullable|array',
-                'location' => 'sometimes|string',
                 'building_number' => 'sometimes|string',
-                'apartment' => 'nullable|string',
-                'location_mark' => 'nullable|string',
+                'apartment' => 'sometimes|string',
+                'location_mark' => 'sometimes|string',
+                'latitude' => 'sometimes|numeric',
+                'longitude' => 'sometimes|numeric',
                 'booking_date' => 'sometimes|date',
                 'booking_time' => 'sometimes|date_format:H:i',
                 'service_price' => 'sometimes|numeric|min:0',
                 'total_price' => 'sometimes|numeric|min:0',
                 'promo_code' => 'nullable|string',
-                'status' => 'sometimes|in:pending,confirmed,completed,cancelled',
+                'status' => 'sometimes|in:request,accepted,rejected,done',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
@@ -71,7 +95,7 @@ class BookingController extends Controller
 
         $booking->update($validatedData);
 
-        return response()->json($booking, 201);
+        return response()->json($booking, 200);
     }
 
     public function destroy($id)
@@ -81,12 +105,19 @@ class BookingController extends Controller
             return response()->json(['error' => 'Booking not found'], 404);
         }
         $booking->delete();
-        return response()->json(null, 201);
+        return response()->json(null, 204);
     }
 
     public function index()
     {
-        $bookings = Booking::with(['user', 'service'])->paginate(15);
-        return response()->json($bookings, 201);
+        $bookings = Booking::with(['service'])->paginate(15);
+        foreach ($bookings as $booking) {
+            if ($booking->user_type === 'user') {
+                $booking->load('user');
+            } else {
+                $booking->load('provider');
+            }
+        }
+        return response()->json($bookings, 200);
     }
 }

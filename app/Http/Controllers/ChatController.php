@@ -13,16 +13,15 @@ use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Storage;
 
 
-
-
 class ChatController extends Controller
 {
-  public function startChat(Request $request)
+
+    public function startChat(Request $request)
     {
         try {
             $request->validate([
-                'user_id' => 'required|exists:users,user_id', // Ensure user_id is required and exists in the users table
-                'provider_id' => 'required|exists:service_providers,provider_id', // Ensure provider_id is required and exists in the service_providers table
+                'user_id' => 'required|exists:users,user_id', 
+                'provider_id' => 'required|exists:service_providers,provider_id', 
             ]);
     } catch (ValidationException $e) {
         return response()->json(['errors' => $e->errors()], 422);
@@ -35,6 +34,20 @@ class ChatController extends Controller
         ]);
 
         return response()->json($chat, 201);
+    }
+
+    public function checkChatExists(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,user_id',
+            'provider_id' => 'required|exists:service_providers,provider_id',
+        ]);
+
+        $chat = Chat::where('user_id', $request->user_id)
+            ->where('provider_id', $request->provider_id)
+            ->first();
+
+        return response()->json(['exists' => $chat ? true : false], 200);
     }
 
     public function sendMessage(Request $request, $chatId)
@@ -75,7 +88,7 @@ class ChatController extends Controller
         $message = Message::create([
             'chat_id' => $chatId,
             'message' => $request->message,
-            'file' => $fileEncoded, // Store the Base64 encoded file
+            'file' => $fileEncoded, 
             'sender_type' => $senderType,
             'sender_id' => $senderId,
         ]);
@@ -89,12 +102,6 @@ class ChatController extends Controller
             'file' => $fileEncoded, // Return the encoded file (if uploaded)
         ], 201);
     }
-    
-    
-    
-    
-    
-    
     
 
     public function getMessages($chatId)
