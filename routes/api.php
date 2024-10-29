@@ -13,6 +13,7 @@ use App\Http\Controllers\FavouriteController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\PermissionTypeController;
 use App\Http\Controllers\UserPermissionController;
+use App\Http\Controllers\AdvertisingImageController;
 
 /*
 |--------------------------------------------------------------------------
@@ -105,6 +106,12 @@ Route::middleware('auth:sanctum')->group(function () {
     //UserPermission routes
     Route::post('/user-permissions', [UserPermissionController::class, 'store']);
     Route::get('/user-permissions', [UserPermissionController::class, 'index']);
+
+    //AdvertisingImage routes
+    Route::post('/advertising-images', [AdvertisingImageController::class, 'store']);
+Route::get('/advertising-images', [AdvertisingImageController::class, 'index']);
+Route::update('/advertising-images/{advertisingImage}', [AdvertisingImageController::class, 'update']);
+Route::delete('/advertising-images/{advertisingImage}', [AdvertisingImageController::class, 'destroy']);
    
 });
 
