@@ -17,6 +17,7 @@ use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\AdvertisingImageController;
 use App\Http\Controllers\BankController;
 use App\Http\Controllers\BmCashoutPrepareController;
+use App\Http\Controllers\WalletController;
 
 
 /*
@@ -114,12 +115,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user-permissions', [UserPermissionController::class, 'store']);
     Route::get('/user-permissions', [UserPermissionController::class, 'index']);
 
-    //AdvertisingImage routes
-    Route::post('/advertising-images', [AdvertisingImageController::class, 'store']);
-Route::get('/advertising-images', [AdvertisingImageController::class, 'index']);
-Route::update('/advertising-images/{advertisingImage}', [AdvertisingImageController::class, 'update']);
-Route::delete('/advertising-images/{advertisingImage}', [AdvertisingImageController::class, 'destroy']);
-   
     // Banks routes
     Route::get('/banks', [BankController::class, 'index']);
     Route::get('/wallets', [BankController::class, 'getWallets']);
@@ -132,6 +127,18 @@ Route::delete('/advertising-images/{advertisingImage}', [AdvertisingImageControl
     // Cashout routes
     Route::get('bank-misr/transactions', [BmCashoutPrepareController::class, 'index']);
     Route::get('bank-misr/transactions/{id}', [BmCashoutPrepareController::class, 'show']);
+
+    //advartising images
+    Route::get('/advertising-images', [AdvertisingImageController::class, 'index']);
+    Route::put('/advertising-images/{id}', [AdvertisingImageController::class, 'update']);
+    Route::delete('/advertising-images/{id}', [AdvertisingImageController::class, 'destroy']);
+    Route::post('/advertising-images', [AdvertisingImageController::class, 'store']);
+
+    // Wallet routes
+    Route::post('/wallet', [WalletController::class, 'store']);
+    Route::get('/wallet', [WalletController::class, 'show']);
+    Route::put('/wallet', [WalletController::class, 'update']);
+
 });
 
 // Service Provider routes
