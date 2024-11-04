@@ -105,7 +105,6 @@ class BmCashoutStatusController extends Controller
         $normalCheckTime = Carbon::now()->subMinutes(
             config('services.bank_misr.status_check_interval', 30)
         );
-
         $dailyCheckTime = Carbon::now()->subDay();
 
         return BmCashoutPrepare::with('status')
@@ -116,19 +115,11 @@ class BmCashoutStatusController extends Controller
                         ->where('prepared_flag', true)
                         ->where('updated_at', '<=', $normalCheckTime);
                 })
-
-                 // Regular 30-40 minute check for transactions with 8111 status
-                ->orWhere(function ($q) use ($normalCheckTime) {
-                    $q->where('response_code', self::FIRST_STATUS_PROCESSING)
-                    ->where('prepared_flag', true)
-                    ->where('updated_at', '<=', $normalCheckTime);
-                })
-                    // Daily check for transactions with 8222 status
-                    ->orWhere(function ($q) use ($dailyCheckTime) {
-                        $q->where('response_code', self::STATUS_PROCESSING)
-                        ->where('prepared_flag', true)
+                // Daily check for transactions with 8222 status
+                ->orWhereHas('status', function ($q) use ($dailyCheckTime) {
+                    $q->where('transaction_status_code', self::STATUS_PROCESSING)
                         ->where('updated_at', '<=', $dailyCheckTime);
-                    });
+                });
             })
             // Exclude transactions with stop-check statuses
             ->whereDoesntHave('status', function ($query) {
@@ -246,12 +237,6 @@ class BmCashoutStatusController extends Controller
         // Handle specific status codes
         if ($statusCode === self::STATUS_SETTLED || in_array($statusCode, self::ERROR_STATUSES)) {
             $transaction->update(['prepared_flag' => false]);
-        }
-        elseif ($statusCode === self::FIRST_STATUS_PROCESSING || $statusCode === self::STATUS_PROCESSING) {
-            $transaction->update([
-                'prepared_flag' => true,
-                'response_code' => $statusCode
-            ]);
         }
 
         return [

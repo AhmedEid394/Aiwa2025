@@ -31,23 +31,32 @@ class FavouriteController extends Controller
     public function toggle(Request $request)
     {
         try {
+            // Validate only the 'service_id' as 'user_id' is now constant
             $validatedData = $request->validate([
-                'user_id' => auth()->user()->user_id,
                 'service_id' => 'required|exists:services,service_id',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         }
 
-        $favourite = Favourite::where('user_id', $validatedData['user_id'])
+        // Set user_id as the authenticated user's ID
+        $user_id = auth()->user()->user_id;
+
+        // Search for an existing favourite
+        $favourite = Favourite::where('user_id', $user_id)
             ->where('service_id', $validatedData['service_id'])
             ->first();
 
         if ($favourite) {
+            // If found, delete the favourite
             $favourite->delete();
             return response()->json(['message' => 'Favourite removed'], 201);
         } else {
-            $favourite = Favourite::create($validatedData);
+            // Otherwise, create a new favourite with the given user_id and service_id
+            $favourite = Favourite::create([
+                'user_id' => $user_id,
+                'service_id' => $validatedData['service_id']
+            ]);
             return response()->json($favourite, 201);
         }
     }

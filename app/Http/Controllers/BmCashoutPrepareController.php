@@ -15,7 +15,7 @@ class BmCashoutPrepareController extends Controller
 {
 
     protected $signerService;
-    
+
     public function __construct(SignerService $signerService)
     {
         $this->signerService = $signerService;
@@ -27,6 +27,7 @@ class BmCashoutPrepareController extends Controller
         try {
             // Validate the incoming request
             $validatedData = $this->validateTransactionRequest($request);
+
 
             // Create initial transaction record and get the generated IDs
             $transaction = $this->createInitialTransaction();
@@ -40,7 +41,7 @@ class BmCashoutPrepareController extends Controller
 
             // Prepare transaction data with the generated IDs
             $transactionData = $this->prepareTransactionData($validatedData, $transaction);
-            
+
             // Generate signature
             $signature = $this->signerService->generateSendTransactionSignature(
                 $transactionData,
@@ -53,7 +54,7 @@ class BmCashoutPrepareController extends Controller
 
             // Prepare final data for API
             $postData = $this->prepareFinalPostData($transactionData, $validatedData, $signature);
-            
+
             // Save transaction details
             $this->saveTransactionDetails($transaction, $postData);
 
@@ -68,9 +69,8 @@ class BmCashoutPrepareController extends Controller
 
             // Send to Bank Misr API
             $response = $this->sendToBank($postData);
-            
-            return response()->json($response);
 
+            return response()->json($response);
         } catch (ValidationException $e) {
             return response()->json(['error' => 'Validation failed', 'details' => $e->errors()], 422);
         } catch (\Exception $e) {
@@ -105,7 +105,7 @@ class BmCashoutPrepareController extends Controller
      */
     private function createInitialTransaction()
     {
-        return BmCashoutPrepare::create([]); 
+        return BmCashoutPrepare::create([]);
     }
 
     /**
@@ -114,7 +114,7 @@ class BmCashoutPrepareController extends Controller
     private function prepareTransactionData($validatedData, $transaction)
     {
         return [
-            'MessageId' => $transaction->message_id,    
+            'MessageId' => $transaction->message_id,
             'TransactionId' => $transaction->transaction_id,
             'CorporateCode' => $validatedData['CorporateCode'] ?? 'AYWACORP',
             'DebtorAccount' => $validatedData['DebtorAccount'],
@@ -180,7 +180,7 @@ class BmCashoutPrepareController extends Controller
      */
     private function sendToBank($postData)
     {
-        $response = Http::withoutVerifying() 
+        $response = Http::withoutVerifying()
             ->timeout(120)
             ->withHeaders(['Content-Type' => 'application/json'])
             ->post(config('services.bank_misr.api_url'), $postData);
@@ -194,15 +194,36 @@ class BmCashoutPrepareController extends Controller
             throw new \Exception('Failed to communicate with bank API');
         }
 
+        // Handle potentially double-encoded JSON response
         $decodedResponse = $response->json();
-        
-        if (isset($decodedResponse['ResponseCode'])) {
-            $this->updateTransactionWithResponse(
-                $postData['TransactionId'], 
-                $decodedResponse['ResponseCode'],
-                $decodedResponse['ResponseDescription']
-            );
+
+        // If the response is a string and appears to be JSON, decode it again
+        if (is_string($decodedResponse) && str_starts_with(trim($decodedResponse), '{')) {
+            try {
+                $decodedResponse = json_decode($decodedResponse, true);
+            } catch (\Exception $e) {
+                Log::error('Failed to decode double-encoded JSON response', [
+                    'original_response' => $decodedResponse,
+                    'error' => $e->getMessage()
+                ]);
+                throw new \Exception('Invalid response format from bank API');
+            }
         }
+
+        // Verify we have the expected response structure
+        if (!is_array($decodedResponse) || !isset($decodedResponse['ResponseCode'])) {
+            Log::error('Unexpected response structure from bank API', [
+                'response' => $decodedResponse
+            ]);
+            throw new \Exception('Invalid response structure from bank API');
+        }
+
+        // Update transaction with response
+        $this->updateTransactionWithResponse(
+            $postData['TransactionId'],
+            $decodedResponse['ResponseCode'],
+            $decodedResponse['ResponseDescription'] ?? null
+        );
 
         return [
             'status' => 'success',
@@ -222,7 +243,7 @@ class BmCashoutPrepareController extends Controller
             ->update([
                 'response_code' => $responseCode,
                 'response_description' => $responseDescription,
-                'prepared_flag' => ($responseCode==8000)?(true):(false)
+                'prepared_flag' => ($responseCode == 8000) ? (true) : (false)
             ]);
     }
 
@@ -240,5 +261,4 @@ class BmCashoutPrepareController extends Controller
         }
         return response()->json($prepare);
     }
-
 }

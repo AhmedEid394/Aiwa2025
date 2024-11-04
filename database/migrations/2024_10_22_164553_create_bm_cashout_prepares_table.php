@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('bm_cashout_prepare', function (Blueprint $table) {
             $table->id('bm_cashout_id');
-            $table->char('message_id', 100)->unique();
-            $table->char('transaction_id', 100)->unique();
+            $table->char('message_id', 50)->nullable()->unique();
+            $table->char('transaction_id', 35)->nullable()->unique();
             $table->char('debtor_account', 34)->nullable();
             $table->char('currency', 3)->nullable();
             $table->decimal('transaction_amount', 12, 2)->nullable();

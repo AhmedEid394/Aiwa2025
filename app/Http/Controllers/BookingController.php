@@ -108,16 +108,25 @@ class BookingController extends Controller
         return response()->json(null, 204);
     }
 
-    public function index()
+        public function index()
     {
-        $bookings = Booking::with(['service'])->paginate(15);
-        foreach ($bookings as $booking) {
-            if ($booking->user_type === 'user') {
-                $booking->load('user');
-            } else {
-                $booking->load('provider');
-            }
+        $user = auth()->user();
+        
+        // Initialize the query with service relation
+        $query = Booking::with(['service', 'service.provider']);
+        
+        // Check user type and filter accordingly
+        if ($user instanceof User) {
+            $query->where('user_id', $user->user_id);
+        } elseif ($user instanceof ServiceProvider) {
+            $query->where('user_id', $user->provider_id);
+        } else {
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
+        
+        // Get paginated results
+        $bookings = $query->paginate(15);
+        
         return response()->json($bookings, 200);
     }
 }

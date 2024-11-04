@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('bm_cashout_status', function (Blueprint $table) {
             $table->id('bm_cashout_status_id');
-            $table->unsignedBigInteger('bm_cashout_id');  
-            $table->char('message_id', 100)->unique();
-            $table->char('transaction_id', 100);
+            $table->unsignedBigInteger('bm_cashout_id');
+            $table->char('message_id', 50)->nullable()->unique();
+            $table->char('transaction_id', 35)->nullable();
             $table->char('transaction_status_code', 6)->nullable();
             $table->string('transaction_status_description', 500)->nullable();
             $table->timestamps();

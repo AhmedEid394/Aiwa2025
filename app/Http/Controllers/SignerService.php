@@ -1,24 +1,23 @@
 <?php
 
 namespace App\Http\Controllers;
-use Illuminate\Support\Facades\Log;
 
+use Illuminate\Support\Facades\Log;
 
 class SignerService
 {
     /**
-     * Generate signature for send transaction
+     * Sign data using PKCS #1 v1.5 padding mode
      *
-     * @param array $transactionData
-     * @param string $privateKeyPath
-     * @return string|null
-     * @throws \Exception
+     * @param string $data Data to be signed
+     * @param string $privateKeyPath Path to the private key file
+     * @param int $hashAlgorithm Hashing algorithm (e.g., OPENSSL_ALGO_SHA256)
+     * @return string Base64 encoded signature
+     * @throws \Exception If signing fails
      */
-    
-    public function generateSendTransactionSignature(array $transactionData, string $privateKeyPath)
+    protected function signData($data, $privateKeyPath, $hashAlgorithm = OPENSSL_ALGO_SHA256)
     {
         try {
-
             $absolutePath = base_path($privateKeyPath);
 
             // Verify private key exists
@@ -32,27 +31,84 @@ class SignerService
                 throw new \Exception('Failed to read private key');
             }
 
+            // Create signature
+            if (openssl_sign($data, $signature, $privateKey, $hashAlgorithm)) {
+                return base64_encode($signature);
+            }
+
+            // Get OpenSSL error if signing fails
+            $error = openssl_error_string();
+            throw new \Exception('Failed to create signature: ' . $error);
+
+        } catch (\Exception $e) {
+            Log::error('Signature generation failed: ' . $e->getMessage(), [
+                'exception' => $e,
+                'data' => $data
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Encode data to the specified encoding
+     *
+     * @param string $data Data to encode
+     * @param string $encoding Encoding type ('UTF-8', 'UTF-16', or 'Unicode')
+     * @return string Encoded data
+     * @throws \Exception If encoding is unsupported
+     */
+    protected function encodeData($data, $encoding)
+    {
+        try {
+            switch ($encoding) {
+                case 'UTF-8':
+                    return mb_convert_encoding($data, 'UTF-8');
+                case 'UTF-16':
+                    return mb_convert_encoding($data, 'UTF-16');
+                case 'Unicode':
+                    return mb_convert_encoding($data, 'UTF-16BE');
+                default:
+                    throw new \Exception('Unsupported encoding');
+            }
+        } catch (\Exception $e) {
+            Log::error('Data encoding failed: ' . $e->getMessage(), [
+                'exception' => $e,
+                'data' => $data,
+                'encoding' => $encoding
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Generate signature for send transaction
+     *
+     * @param array $transactionData
+     * @param string $privateKeyPath
+     * @param string $encoding Encoding type ('UTF-8', 'UTF-16', or 'Unicode')
+     * @return string|null
+     * @throws \Exception
+     */
+    public function generateSendTransactionSignature(array $transactionData, string $privateKeyPath, string $encoding = 'UTF-8')
+    {
+        try {
             // Create signature string
             $signString = implode('', [
                 $transactionData['MessageId'],
                 $transactionData['TransactionId'],
+                $transactionData['CorporateCode'],
                 $transactionData['DebtorAccount'],
-                $transactionData['Currency'],
-                number_format((float) $transactionData['TransactionAmount'], 2, '.', ''),
                 $transactionData['CreditorAccountNumber'],
                 $transactionData['CreditorBank'],
-                $transactionData['CorporateCode']
+                $transactionData['TransactionAmount'],
+                $transactionData['Currency']
             ]);
 
-            // Create signature
-            $signature = '';
-            $success = openssl_sign($signString, $signature, $privateKey, OPENSSL_ALGO_SHA256);
-            
-            if (!$success) {
-                throw new \Exception('Failed to generate signature');
-            }
+            // Encode the data
+            $encodedSignString = $this->encodeData($signString, $encoding);
 
-            return base64_encode($signature);
+            // Generate and return the signature
+            return $this->signData($encodedSignString, $privateKeyPath);
 
         } catch (\Exception $e) {
             Log::error('Signature generation failed: ' . $e->getMessage(), [
@@ -62,4 +118,5 @@ class SignerService
             throw $e;
         }
     }
+
 }

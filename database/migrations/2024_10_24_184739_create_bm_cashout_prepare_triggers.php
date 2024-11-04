@@ -14,7 +14,6 @@ return new class extends Migration
     {
         // Drop existing functions and triggers if they exist
         DB::unprepared('DROP TRIGGER IF EXISTS before_bm_cashout_prepare_insert');
-        DB::unprepared('DROP TRIGGER IF EXISTS before_bm_cashout_prepare_update');
         DB::unprepared('DROP FUNCTION IF EXISTS generate_padded_number');
         DB::unprepared('DROP FUNCTION IF EXISTS generate_uuid_v4');
 
@@ -33,10 +32,10 @@ return new class extends Migration
         // Create function for UUID generation
         DB::unprepared('
             CREATE FUNCTION generate_uuid_v4()
-            RETURNS VARCHAR(36)
+            RETURNS VARCHAR(35)
             DETERMINISTIC
             BEGIN
-                RETURN UUID();
+                RETURN LEFT(UUID(), 35); -- Truncate UUID to 35 characters
             END
         ');
 
@@ -51,21 +50,11 @@ return new class extends Migration
                     SET NEW.transaction_id = generate_uuid_v4();
                 END IF;
                 
-                -- Always generate a new message_id
-                SET NEW.message_id = CONCAT(generate_padded_number(), "-", NEW.transaction_id);
+                -- Always generate a new message_id within 50 characters
+                SET NEW.message_id = LEFT(CONCAT(generate_padded_number(), "-", NEW.transaction_id), 50);
             END
         ');
 
-        // Create trigger for updates
-        DB::unprepared('
-            CREATE TRIGGER before_bm_cashout_prepare_update
-            BEFORE UPDATE ON bm_cashout_prepare
-            FOR EACH ROW
-            BEGIN
-                -- Only update message_id, keep the same transaction_id
-                SET NEW.message_id = CONCAT(generate_padded_number(), "-", NEW.transaction_id);
-            END
-        ');
     }
 
     /**
@@ -77,7 +66,6 @@ return new class extends Migration
     {
         // Drop triggers and functions in reverse order
         DB::unprepared('DROP TRIGGER IF EXISTS before_bm_cashout_prepare_insert');
-        DB::unprepared('DROP TRIGGER IF EXISTS before_bm_cashout_prepare_update');
         DB::unprepared('DROP FUNCTION IF EXISTS generate_padded_number');
         DB::unprepared('DROP FUNCTION IF EXISTS generate_uuid_v4');
     }
