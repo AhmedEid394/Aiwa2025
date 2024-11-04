@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Schema;
     {
       Schema::create('advertising_images', function (Blueprint $table) {
           $table->id('advertising_image_id'); // Primary key
-          $table->string('image_path'); 
-          $table->boolean('status')->default(1)->change();
+          $table->longText('image_path')->nullable(); 
+          $table->boolean('status')->default(1);
           $table->timestamps(); 
       });
   }

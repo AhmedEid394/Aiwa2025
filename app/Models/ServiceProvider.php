@@ -61,5 +61,9 @@ class ServiceProvider extends Model
     {
         return $this->hasMany(Chat::class, 'provider_id');
     }
+    public function wallets()
+    {
+        return $this->hasMany(Wallet::class, 'provider_id');
+    }
     
 }
