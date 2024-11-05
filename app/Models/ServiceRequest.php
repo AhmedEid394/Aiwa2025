@@ -10,6 +10,8 @@ class ServiceRequest extends Model
 
     protected $fillable = [
         'user_id',
+        'user_type',
+        'sub_category_id',
         'title',
         'description',
         'date_of_done',
@@ -25,9 +27,5 @@ class ServiceRequest extends Model
         'pictures' => 'array',
     ];
 
-    public function user()
-    {
-        return $this->belongsTo(User::class, 'user_id');
-    }
 
 }

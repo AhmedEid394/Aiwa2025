@@ -15,6 +15,8 @@ class Transaction extends Authenticatable
 
     protected $fillable = [
         'user_id',
+        'user_type',
+        'transaction_type',
         'service_id',
         'booking_id',
         'amount',
