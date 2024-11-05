@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ServiceProvider;
 use Illuminate\Http\Request;
+use App\Models\Wallet;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -34,15 +35,28 @@ class ServiceProviderController extends Controller
             return response()->json(['errors' => $e->errors()], 422);
         }
 
+        // Hash the password
         $validatedData['password'] = Hash::make($validatedData['password']);
+        
+        // Create the service provider
         $provider = ServiceProvider::create($validatedData);
 
+        // Create a wallet with default values
+        $wallet = Wallet::create([
+            'provider_id' => $provider->provider_id,
+            'total_amount' => 0,        
+            'available_amount' => 0,      
+        ]);
+
+        // Generate an auth token for the service provider
         $token = $provider->createToken('auth_token')->plainTextToken;
 
-        return response()->json(['token' => $token, 'provider' => $provider], 201);
+        return response()->json([
+            'token' => $token,
+            'provider' => $provider,
+            'wallet' => $wallet
+        ], 201);
     }
-
-
 
     public function login(Request $request)
     {

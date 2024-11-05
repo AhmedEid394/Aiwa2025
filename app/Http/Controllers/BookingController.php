@@ -117,9 +117,9 @@ class BookingController extends Controller
         
         // Check user type and filter accordingly
         if ($user instanceof User) {
-            $query->where('user_id', $user->user_id);
+            $query->where('user_id', $user->user_id)->where('user_type', 'user');
         } elseif ($user instanceof ServiceProvider) {
-            $query->where('user_id', $user->provider_id);
+            $query->where('user_id', $user->provider_id)->where('user_type', 'Provider');
         } else {
             return response()->json(['error' => 'Unauthorized'], 401);
         }

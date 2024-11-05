@@ -19,7 +19,6 @@ class CreateWalletsTable extends Migration
             $table->decimal('total_amount', 10, 2)->default(0.00);
             $table->decimal('available_amount', 10, 2)->default(0.00);
             $table->timestamps();
-
             $table->foreign('provider_id')->references('provider_id')->on('service_providers')->onDelete('cascade');
         });
     }

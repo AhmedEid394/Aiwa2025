@@ -18,6 +18,8 @@ use App\Http\Controllers\AdvertisingImageController;
 use App\Http\Controllers\BankController;
 use App\Http\Controllers\BmCashoutPrepareController;
 use App\Http\Controllers\WalletController;
+use App\Http\Controllers\TransactionController;
+
 
 
 /*
@@ -36,7 +38,6 @@ use App\Http\Controllers\WalletController;
 Route::post('/users/register', [UserController::class, 'register']);
 Route::post('/users/login', [UserController::class, 'login']);
 Route::post('/login', [Controller::class, 'login']);
-Route::post('bank-misr/prepare-transaction', [BmCashoutPrepareController::class, 'generateSignAndSendTransaction']);
 
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -127,6 +128,15 @@ Route::middleware('auth:sanctum')->group(function () {
     // Cashout routes
     Route::get('bank-misr/transactions', [BmCashoutPrepareController::class, 'index']);
     Route::get('bank-misr/transactions/{id}', [BmCashoutPrepareController::class, 'show']);
+    Route::post('bank-misr/prepare-transaction', [BmCashoutPrepareController::class, 'generateSignAndSendTransaction']);
+
+    // Transaction routes
+    Route::get('/transactions', [TransactionController::class, 'index']);
+    Route::post('/transactions', [TransactionController::class, 'store']);
+    Route::get('/transactions/{id}', [TransactionController::class, 'show']);
+    Route::put('/transactions/{id}', [TransactionController::class, 'update']);
+    Route::delete('/transactions/{id}', [TransactionController::class, 'destroy']);
+
 
     //advartising images
     Route::get('/advertising-images', [AdvertisingImageController::class, 'index']);
