@@ -55,7 +55,7 @@ class WalletController extends Controller
         // Get the authenticated provider
         $provider = auth()->user()->provider_id;
 
-        $wallet = Wallet::where('provider_id', $provider)->first();
+        $wallet = Wallet::where('provider_id', $provider)->with('Provider')->first();
 
         // Check if the wallet exists
         if (!$wallet) {
