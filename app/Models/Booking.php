@@ -38,4 +38,14 @@ class Booking extends Model
     {
         return $this->belongsTo(Service::class, 'service_id');
     }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function provider()
+    {
+        return $this->belongsTo(ServiceProvider::class, 'user_id');
+    }
 }

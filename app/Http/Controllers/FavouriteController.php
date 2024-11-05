@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Favourite;
+use App\Models\ServiceProvider;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -19,12 +21,16 @@ class FavouriteController extends Controller
 
     public function index()
     {
-        $userId = auth()->user()->user_id;
-        if ($userId) {
-            $favourites = Favourite::with('service')->where('user_id', $userId)->paginate(15);
+        $user = auth()->user();
+        if ($user instanceof ServiceProvider) {
+            $userId= $user->provider_id;
+        } elseif ($user instanceof User) {
+            $userId= $user->user_id;
         } else {
-            $favourites = Favourite::with(['user', 'service'])->paginate(15);
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
+
+        $favourites = Favourite::with('service')->where('user_id', $userId)->paginate(15);
         return response()->json($favourites, 201);
     }
 
@@ -40,10 +46,16 @@ class FavouriteController extends Controller
         }
 
         // Set user_id as the authenticated user's ID
-        $user_id = auth()->user()->user_id;
-
+        $user = auth()->user();
+        if ($user instanceof ServiceProvider) {
+            $userId= $user->provider_id;
+        } elseif ($user instanceof User) {
+            $userId= $user->user_id;
+        } else {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
         // Search for an existing favourite
-        $favourite = Favourite::where('user_id', $user_id)
+        $favourite = Favourite::where('user_id', $userId)
             ->where('service_id', $validatedData['service_id'])
             ->first();
 
@@ -54,10 +66,9 @@ class FavouriteController extends Controller
         } else {
             // Otherwise, create a new favourite with the given user_id and service_id
             $favourite = Favourite::create([
-                'user_id' => $user_id,
+                'user_id' => $userId,
                 'service_id' => $validatedData['service_id']
-            ]);
-            return response()->json($favourite, 201);
+            ]);            return response()->json($favourite, 201);
         }
     }
 }

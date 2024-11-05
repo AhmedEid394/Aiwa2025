@@ -2,6 +2,12 @@
 
 namespace App\Providers;
 
+use App\Events\ServiceRequested;
+use App\Events\ServiceRequestStatusUpdated;
+use App\Events\SystemNotificationEvent;
+use App\Listeners\SendServiceRequestStatusUpdate;
+use App\Listeners\SendSystemNotification;
+use App\Listeners\ServiceRequestedListener;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -17,6 +23,15 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         Registered::class => [
             SendEmailVerificationNotification::class,
+        ],
+        ServiceRequested::class => [
+            ServiceRequestedListener::class,
+        ],
+        ServiceRequestStatusUpdated::class => [
+            SendServiceRequestStatusUpdate::class,
+        ],
+        SystemNotificationEvent::class => [
+            SendSystemNotification::class,
         ],
     ];
 

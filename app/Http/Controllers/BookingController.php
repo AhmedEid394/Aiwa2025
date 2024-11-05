@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\BookingStatusUpdated;
 use App\Models\Booking;
 use Illuminate\Http\Request;
 use App\Models\ServiceProvider;
@@ -31,7 +32,7 @@ class BookingController extends Controller
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         }
-        
+
         $user = auth()->user();
 
         if ($user instanceof ServiceProvider) {
@@ -92,9 +93,11 @@ class BookingController extends Controller
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         }
-
+        $oldStatus = $booking->status;
         $booking->update($validatedData);
-
+        if ($oldStatus !== $booking->status) {
+            event(new BookingStatusUpdated($booking));
+        }
         return response()->json($booking, 200);
     }
 
@@ -111,10 +114,10 @@ class BookingController extends Controller
         public function index()
     {
         $user = auth()->user();
-        
+
         // Initialize the query with service relation
         $query = Booking::with(['service', 'service.provider']);
-        
+
         // Check user type and filter accordingly
         if ($user instanceof User) {
             $query->where('user_id', $user->user_id)->where('user_type', 'user');
@@ -123,10 +126,10 @@ class BookingController extends Controller
         } else {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-        
+
         // Get paginated results
         $bookings = $query->paginate(15);
-        
+
         return response()->json($bookings, 200);
     }
 }

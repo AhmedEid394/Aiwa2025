@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ServiceProvider;
 use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -12,7 +14,15 @@ class TransactionController extends Controller
     // Display a list of transactions
     public function index()
     {
-        $userId = auth()->user()->provider_id;
+        $user = auth()->user();
+        $userId=null;
+        if ($user instanceof ServiceProvider) {
+            $userId= $user->provider_id;
+        } elseif ($user instanceof User) {
+            $userId= $user->user_id;
+        } else {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
 
         $query = Transaction::with(['service']);
 
@@ -30,7 +40,7 @@ class TransactionController extends Controller
     {
         try {
             $validatedData = $request->validate([
-                'user_id' => 'required|exists:users,user_id',
+                'transaction_type' => 'required|in:cash_out,cash_in',
                 'service_id' => 'required|exists:services,service_id',
                 'booking_id' => 'nullable|exists:bookings,booking_id',
                 'amount' => 'required|numeric',
@@ -39,6 +49,16 @@ class TransactionController extends Controller
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
+        }
+        $user = auth()->user();
+        if ($user instanceof ServiceProvider) {
+            $validatedData['user_type'] = 'Provider';
+            $validatedData['user_id']=$user->provider_id;
+        } elseif ($user instanceof User) {
+            $validatedData['user_type'] = 'user';
+            $validatedData['user_id']=$user->user_id;
+        } else {
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
         $transaction = Transaction::create($validatedData);
 
@@ -66,7 +86,6 @@ class TransactionController extends Controller
             $validatedData = $request->validate([
                 'amount' => 'sometimes|required|numeric',
                 'status' => 'sometimes|required|in:pending,completed,failed,refunded',
-                'transaction_reference' => 'sometimes|nullable|string|max:255',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);

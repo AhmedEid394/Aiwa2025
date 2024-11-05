@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ServiceRequested;
+use App\Events\ServiceRequestStatusUpdated;
+use App\Models\ServiceProvider;
 use App\Models\ServiceRequest;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -12,7 +16,7 @@ class ServiceRequestController extends Controller
     {
         try {
             $validatedData = $request->validate([
-                'user_id' => 'required|exists:users,user_id',
+                'sub_category_id' => 'required|exists:sub_categories,sub_category_id',
                 'title' => 'required|string|max:255',
                 'description' => 'required|string',
                 'date_of_done' => 'required|date',
@@ -25,8 +29,19 @@ class ServiceRequestController extends Controller
             return response()->json(['errors' => $e->errors()], 422);
         }
 
-        $serviceRequest = ServiceRequest::create($validatedData);
+        $user = auth()->user();
+        if ($user instanceof ServiceProvider) {
+            $validatedData['user_type'] = 'Provider';
+            $validatedData['user_id']=$user->provider_id;
+        } elseif ($user instanceof User) {
+            $validatedData['user_type'] = 'user';
+            $validatedData['user_id']=$user->user_id;
+        } else {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
 
+        $serviceRequest = ServiceRequest::create($validatedData);
+        event(new ServiceRequested($serviceRequest));
         return response()->json($serviceRequest, 201);
     }
 
@@ -59,9 +74,11 @@ class ServiceRequestController extends Controller
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         }
-
+        $oldStatus = $serviceRequest->status;
         $serviceRequest->update($validatedData);
-
+        if ($oldStatus !== $serviceRequest->status) {
+            event(new ServiceRequestStatusUpdated($serviceRequest));
+        }
         return response()->json($serviceRequest, 201);
     }
 
@@ -77,8 +94,21 @@ class ServiceRequestController extends Controller
 
     public function index(Request $request)
     {
-        $query = ServiceRequest::with('user');
+        $user = auth()->user();
 
+        // Determine user ID based on user type
+        if ($user instanceof ServiceProvider) {
+            $userId = $user->provider_id;
+        } elseif ($user instanceof User) {
+            $userId = $user->user_id;
+        } else {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        // Start query with user relationship loaded
+        $query = ServiceRequest::all();
+
+        // Apply additional filters if provided in the request
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
         }
@@ -87,9 +117,12 @@ class ServiceRequestController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Paginate results
         $serviceRequests = $query->paginate(15);
-        return response()->json($serviceRequests, 201);
+
+        return response()->json($serviceRequests, 200);
     }
+
 
     public function updateStatus(Request $request, $id)
     {
@@ -107,6 +140,7 @@ class ServiceRequestController extends Controller
         }
 
         $serviceRequest->update($validatedData);
+        event(new ServiceRequestStatusUpdated($serviceRequest));
 
         return response()->json($serviceRequest, 201);
     }
