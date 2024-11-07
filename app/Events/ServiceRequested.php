@@ -9,29 +9,34 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
-class ServiceRequested
+class ServiceRequested implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $serviceRequest;
-    /**
-     * Create a new event instance.
-     */
+
     public function __construct($serviceRequest)
     {
         $this->serviceRequest = $serviceRequest;
     }
 
-    /**
-     * Get the channels the event should broadcast on.
-     *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
-     */
-    public function broadcastOn(): array
+    public function broadcastOn()
+    {
+        Log::info('ServiceRequested event broadcasted on service-request channel');
+        return new Channel('service-request');
+    }
+
+    public function broadcastWith()
     {
         return [
-            new PrivateChannel('channel-name'),
+            'serviceRequest' => $this->serviceRequest
         ];
+    }
+
+    public function broadcastAs()
+    {
+        return 'service-requested';
     }
 }

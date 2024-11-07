@@ -10,7 +10,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ServiceRequestStatusUpdated
+class ServiceRequestStatusUpdated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
     public $serviceRequest;
@@ -25,12 +25,23 @@ class ServiceRequestStatusUpdated
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * @return Channel
      */
-    public function broadcastOn(): array
+
+    public function broadcastOn()
+    {
+        return new Channel('service-request-status.' . $this->serviceRequest->id);
+    }
+
+    public function broadcastWith()
     {
         return [
-            new PrivateChannel('channel-name'),
+            'serviceRequest' => $this->serviceRequest
         ];
+    }
+
+    public function broadcastAs()
+    {
+        return 'service-request-status-updated';
     }
 }

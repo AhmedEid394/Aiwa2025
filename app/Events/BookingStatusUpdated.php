@@ -10,7 +10,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class BookingStatusUpdated
+class BookingStatusUpdated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
     public $booking;
@@ -25,12 +25,22 @@ class BookingStatusUpdated
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * @return Channel
      */
-    public function broadcastOn(): array
+    public function broadcastOn()
+    {
+        return new Channel('booking-status.' . $this->booking->id);
+    }
+
+    public function broadcastWith()
     {
         return [
-            new PrivateChannel('channel-name'),
+            'booking' => $this->booking
         ];
+    }
+
+    public function broadcastAs()
+    {
+        return 'booking-status-updated';
     }
 }

@@ -10,7 +10,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class SystemNotificationEvent
+class SystemNotificationEvent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -29,12 +29,23 @@ class SystemNotificationEvent
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * @return Channel
      */
-    public function broadcastOn(): array
+
+    public function broadcastOn()
+    {
+        return new Channel('system-notification.' . $this->data['user_id']);
+    }
+
+    public function broadcastWith()
     {
         return [
-            new PrivateChannel('channel-name'),
+            'data' => $this->data
         ];
+    }
+
+    public function broadcastAs()
+    {
+        return 'system-notification';
     }
 }
