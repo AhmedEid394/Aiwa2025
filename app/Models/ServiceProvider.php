@@ -65,5 +65,9 @@ class ServiceProvider extends Model
     {
         return $this->hasMany(Wallet::class, 'provider_id');
     }
-    
+
+    public function routeNotificationForFcm()
+    {
+        return FcmToken::where('user_id', $this->provider_id)->pluck('token')->toArray();
+    }
 }

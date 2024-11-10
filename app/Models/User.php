@@ -60,13 +60,8 @@ class User extends Authenticatable
         return $this->hasMany(Chat::class, 'user_id');
     }
 
-    public function fcmTokens()
-    {
-        return $this->hasMany(FcmToken::class, 'user_id');
-    }
-
     public function routeNotificationForFcm()
     {
-        return $this->fcmTokens()->pluck('token')->toArray();
+        return FcmToken::where('user_id', $this->user_id)->pluck('token')->toArray();
     }
 }

@@ -2,12 +2,15 @@
 
 namespace App\Notifications;
 
+use App\Models\FcmToken;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
 use NotificationChannels\Fcm\FcmChannel;
 use NotificationChannels\Fcm\FcmMessage;
+use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
 class ServiceRequestNotification extends Notification implements ShouldBroadcast
 {
@@ -25,20 +28,39 @@ class ServiceRequestNotification extends Notification implements ShouldBroadcast
         return ['database', 'broadcast', FcmChannel::class];
     }
 
-    public function toFcm($notifiable)
+    public function toFcm($notifiable): FcmMessage
     {
-        return FcmMessage::create()
-            ->setData([
-                'service_request_id' => (string)$this->serviceRequest->id,
-                'type' => 'service_request'
-            ])
-            ->setNotification(
-                \NotificationChannels\Fcm\Resources\Notification::create()
-                    ->setTitle('New Service Request')
-                    ->setBody($this->serviceRequest->title)
-            );
-    }
+        Log::info('toFcm');
+        return (new FcmMessage(notification: new FcmNotification(
+            title: 'Service Request',
+            body: 'You have a new service request',
 
+        )))
+            ->data(['data1' => 'value', 'data2' => 'value2'])
+            ->custom([
+                'android' => [
+                    'notification' => [
+                        'color' => '#0A0A0A',
+                        'sound' => 'default',
+                    ],
+                    'fcm_options' => [
+                        'analytics_label' => 'analytics',
+                    ],
+                ],
+                'apns' => [
+                    'payload' => [
+                        'aps' => [
+                            'sound' => 'default'
+                        ],
+                    ],
+                    'fcm_options' => [
+                        'analytics_label' => 'analytics',
+                    ],
+                ],
+            ])
+            ->token(FcmToken::where('user_id', $notifiable->user_id)
+                ->orWhere('user_id',$notifiable->provider_id)->first()->token);
+    }
     public function toArray($notifiable)
     {
         return [
