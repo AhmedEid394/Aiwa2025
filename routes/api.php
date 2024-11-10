@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\FcmTokenController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ServiceProviderController;
@@ -46,6 +47,8 @@ Route::post('/pusher/auth', function (Request $request, PusherService $pusherSer
     return response()->json($data);
 })->middleware('auth:sanctum');
 
+// routes/api.php
+Route::middleware('auth:sanctum')->post('/update-fcm-token', [FcmTokenController::class, 'update']);
 
 // User routes
 Route::post('/users/register', [UserController::class, 'register']);
