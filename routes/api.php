@@ -7,7 +7,6 @@ use App\Http\Controllers\SubCategoryController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ServiceRequestController;
 use App\Http\Controllers\ServiceController;
-use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\FavouriteController;
 use App\Http\Controllers\ChatController;
@@ -19,8 +18,8 @@ use App\Http\Controllers\BankController;
 use App\Http\Controllers\BmCashoutPrepareController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\TransactionController;
-
-
+use Illuminate\Http\Request;
+use App\Services\PusherService;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,6 +31,20 @@ use App\Http\Controllers\TransactionController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
+
+// Pusher Routes
+Route::post('/pusher/auth', function (Request $request, PusherService $pusherService) {
+    $user = $request->user();
+    $channel_name = $request->channel_name;
+    $socket_id = $request->socket_id;
+
+    $data = $pusherService->getPusherClient()->presence_auth($channel_name, $socket_id, $user->id, [
+        'name' => $user->name,
+    ]);
+
+    return response()->json($data);
+})->middleware('auth:sanctum');
 
 
 // User routes
@@ -78,13 +91,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/services', [ServiceController::class, 'index']);
     Route::post('/services/search', [ServiceController::class, 'search']);
 
-    // Notification routes
-    Route::post('/notifications', [NotificationController::class, 'store']);
-    Route::get('/notifications/{id}', [NotificationController::class, 'show']);
-    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
-    Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
-    Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
     // Booking routes
     Route::post('/bookings', [BookingController::class, 'store']);

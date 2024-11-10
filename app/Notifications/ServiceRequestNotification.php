@@ -1,100 +1,66 @@
 <?php
+
 namespace App\Notifications;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Notification;
-use App\Events\ServiceRequested;
+use NotificationChannels\Fcm\FcmChannel;
+use NotificationChannels\Fcm\FcmMessage;
 
-class ServiceRequestNotification extends Notification
+class ServiceRequestNotification extends Notification implements ShouldBroadcast
 {
-use Queueable;
+    use Queueable;
 
-public $serviceRequest;
+    public $serviceRequest;
 
-/**
-* Create a new notification instance.
-*/
-public function __construct($serviceRequest)
-{
-$this->serviceRequest = $serviceRequest;
-}
+    public function __construct($serviceRequest)
+    {
+        $this->serviceRequest = $serviceRequest;
+    }
 
-/**
-* Get the notification's delivery channels.
-*
-* @return array<int, string>
-*/
-public function via(object $notifiable): array
-{
-return ['database', 'broadcast'];
-}
+    public function via($notifiable)
+    {
+        return ['database', 'broadcast', FcmChannel::class];
+    }
 
-/**
-* Get the mail representation of the notification.
-*/
-public function toMail(object $notifiable): MailMessage
-{
-return (new MailMessage)
-->line('The introduction to the notification.')
-->action('Notification Action', url('/'))
-->line('Thank you for using our application!');
-}
+    public function toFcm($notifiable)
+    {
+        return FcmMessage::create()
+            ->setData([
+                'service_request_id' => (string)$this->serviceRequest->id,
+                'type' => 'service_request'
+            ])
+            ->setNotification(
+                \NotificationChannels\Fcm\Resources\Notification::create()
+                    ->setTitle('New Service Request')
+                    ->setBody($this->serviceRequest->title)
+            );
+    }
 
-/**
-* Get the array representation of the notification.
-*
-* @return array<string, mixed>
-*/
-public function toArray(object $notifiable): array
-{
-return [
-'title' => $this->serviceRequest->title,
-'description' => $this->serviceRequest->description,
-];
-}
+    public function toArray($notifiable)
+    {
+        return [
+            'title' => $this->serviceRequest->title,
+            'description' => $this->serviceRequest->description,
+        ];
+    }
 
-/**
-* Get the notification's database type.
-*
-* @return string
-*/
-public function databaseType(object $notifiable): string
-{
-return 'service-request';
-}
+    public function broadcastOn()
+    {
+        return new Channel('service-request');
+    }
 
-/**
-* Get the channels the event should broadcast on.
-*
-* @return Channel
- */
-public function broadcastOn()
-{
-return new Channel('service-request');
-}
+    public function broadcastWith()
+    {
+        return [
+            'serviceRequest' => $this->serviceRequest,
+        ];
+    }
 
-/**
-* Get the data to broadcast.
-*
-* @return array
-*/
-public function broadcastWith()
-{
-return [
-'serviceRequest' => $this->serviceRequest
-];
-}
-
-/**
-* Get the event name to broadcast.
-*
-* @return string
-*/
-public function broadcastAs()
-{
-return 'service-requested';
-}
+    public function broadcastAs()
+    {
+        return 'service-requested';
+    }
 }

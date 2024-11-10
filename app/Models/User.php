@@ -41,16 +41,11 @@ class User extends Authenticatable
         return $this->hasMany(Favourite::class, 'user_id');
     }
 
-    public function notifications()
-    {
-        return $this->hasMany(Notification::class, 'user_id');
-    }
-
     public function serviceRequests()
     {
         return $this->hasMany(ServiceRequest::class, 'user_id');
     }
-  
+
     public function addresses()
     {
         return $this->hasMany(Address::class);
@@ -64,4 +59,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Chat::class, 'user_id');
     }
-  }
+
+    public function fcmTokens()
+    {
+        return $this->hasMany(FcmToken::class, 'user_id');
+    }
+
+    public function routeNotificationForFcm()
+    {
+        return $this->fcmTokens()->pluck('token')->toArray();
+    }
+}
