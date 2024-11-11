@@ -32,9 +32,8 @@ class ServiceRequestNotification extends Notification implements ShouldBroadcast
     {
         Log::info('toFcm');
         return (new FcmMessage(notification: new FcmNotification(
-            title: 'Service Request',
-            body: 'You have a new service request',
-
+            title: $this->serviceRequest->title,
+            body: $this->serviceRequest->description,
         )))
             ->data(['data1' => 'value', 'data2' => 'value2'])
             ->custom([
@@ -61,6 +60,7 @@ class ServiceRequestNotification extends Notification implements ShouldBroadcast
             ->token(FcmToken::where('user_id', $notifiable->user_id)
                 ->orWhere('user_id',$notifiable->provider_id)->first()->token);
     }
+
     public function toArray($notifiable)
     {
         return [
