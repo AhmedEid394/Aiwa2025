@@ -10,7 +10,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class BookingStatusUpdated implements ShouldBroadcast
+class BookingStatusUpdated
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
     public $booking;
@@ -27,20 +27,4 @@ class BookingStatusUpdated implements ShouldBroadcast
      *
      * @return Channel
      */
-    public function broadcastOn()
-    {
-        return new Channel('booking-status.' . $this->booking->id);
-    }
-
-    public function broadcastWith()
-    {
-        return [
-            'booking' => $this->booking
-        ];
-    }
-
-    public function broadcastAs()
-    {
-        return 'booking-status-updated';
-    }
 }

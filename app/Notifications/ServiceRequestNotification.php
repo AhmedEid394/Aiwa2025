@@ -3,6 +3,8 @@
 namespace App\Notifications;
 
 use App\Models\FcmToken;
+use App\Models\ServiceProvider;
+use App\Models\User;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -25,40 +27,39 @@ class ServiceRequestNotification extends Notification implements ShouldBroadcast
 
     public function via($notifiable)
     {
-        return ['database', 'broadcast', FcmChannel::class];
+        return ['database', FcmChannel::class];
     }
 
     public function toFcm($notifiable): FcmMessage
     {
-        Log::info('toFcm');
+
         return (new FcmMessage(notification: new FcmNotification(
-            title: $this->serviceRequest->title,
-            body: $this->serviceRequest->description,
-        )))
-            ->data(['data1' => 'value', 'data2' => 'value2'])
-            ->custom([
-                'android' => [
-                    'notification' => [
-                        'color' => '#0A0A0A',
-                        'sound' => 'default',
-                    ],
-                    'fcm_options' => [
-                        'analytics_label' => 'analytics',
-                    ],
-                ],
-                'apns' => [
-                    'payload' => [
-                        'aps' => [
-                            'sound' => 'default'
+                title: $this->serviceRequest->title,
+                body: $this->serviceRequest->description,
+            )))
+                ->data(['data1' => 'value', 'data2' => 'value2'])
+                ->custom([
+                    'android' => [
+                        'notification' => [
+                            'color' => '#0A0A0A',
+                            'sound' => 'default',
+                        ],
+                        'fcm_options' => [
+                            'analytics_label' => 'analytics',
                         ],
                     ],
-                    'fcm_options' => [
-                        'analytics_label' => 'analytics',
+                    'apns' => [
+                        'payload' => [
+                            'aps' => [
+                                'sound' => 'default'
+                            ],
+                        ],
+                        'fcm_options' => [
+                            'analytics_label' => 'analytics',
+                        ],
                     ],
-                ],
-            ])
-            ->token(FcmToken::where('user_id', $notifiable->user_id)
-                ->orWhere('user_id',$notifiable->provider_id)->first()->token);
+                ]);
+
     }
 
     public function toArray($notifiable)
@@ -68,21 +69,9 @@ class ServiceRequestNotification extends Notification implements ShouldBroadcast
             'description' => $this->serviceRequest->description,
         ];
     }
-
-    public function broadcastOn()
+    public function databaseType(object $notifiable): string
     {
-        return new Channel('service-request');
+        return 'service-request';
     }
 
-    public function broadcastWith()
-    {
-        return [
-            'serviceRequest' => $this->serviceRequest,
-        ];
-    }
-
-    public function broadcastAs()
-    {
-        return 'service-requested';
-    }
 }

@@ -10,7 +10,8 @@ class CreateFcmTokensTable extends Migration
     {
         Schema::create('fcm_tokens', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('user_id')->constrained()->onDelete('cascade');
+            $table->enum('user_type', ['user', 'Provider'])->default('user');
             $table->string('token')->unique();
             $table->timestamps();
         });

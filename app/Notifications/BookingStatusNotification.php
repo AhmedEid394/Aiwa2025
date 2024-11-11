@@ -2,10 +2,16 @@
 
 namespace App\Notifications;
 
+use App\Models\FcmToken;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
+use NotificationChannels\Fcm\FcmChannel;
+use NotificationChannels\Fcm\FcmMessage;
+use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
 class BookingStatusNotification extends Notification
 {
@@ -24,9 +30,39 @@ class BookingStatusNotification extends Notification
      *
      * @return array<int, string>
      */
-    public function via(object $notifiable): array
+    public function via($notifiable)
     {
-        return ['database','broadcast'];
+        return ['database', FcmChannel::class];
+    }
+
+    public function toFcm($notifiable): FcmMessage
+    {
+        return (new FcmMessage(notification: new FcmNotification(
+            title: 'Booking '. $this->booking->title .'Status Updated',
+            body: 'Your booking status has been updated to '.$this->booking->status,
+        )))
+            ->data(['data1' => 'value', 'data2' => 'value2'])
+            ->custom([
+                'android' => [
+                    'notification' => [
+                        'color' => '#0A0A0A',
+                        'sound' => 'default',
+                    ],
+                    'fcm_options' => [
+                        'analytics_label' => 'analytics',
+                    ],
+                ],
+                'apns' => [
+                    'payload' => [
+                        'aps' => [
+                            'sound' => 'default'
+                        ],
+                    ],
+                    'fcm_options' => [
+                        'analytics_label' => 'analytics',
+                    ],
+                ],
+            ]);
     }
 
     /**
@@ -59,4 +95,5 @@ class BookingStatusNotification extends Notification
     {
         return 'update-status';
     }
+
 }

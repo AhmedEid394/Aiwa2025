@@ -68,6 +68,7 @@ class ServiceProvider extends Model
 
     public function routeNotificationForFcm()
     {
-        return FcmToken::where('user_id', $this->provider_id)->pluck('token')->toArray();
+        return FcmToken::where('user_id', $this->provider_id)
+            ->where('user_type','Provider')->pluck('token')->toArray();
     }
 }

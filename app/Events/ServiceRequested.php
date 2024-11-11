@@ -11,7 +11,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class ServiceRequested implements ShouldBroadcast
+class ServiceRequested
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -20,23 +20,5 @@ class ServiceRequested implements ShouldBroadcast
     public function __construct($serviceRequest)
     {
         $this->serviceRequest = $serviceRequest;
-    }
-
-    public function broadcastOn()
-    {
-        Log::info('ServiceRequested event broadcasted on service-request channel');
-        return new Channel('service-request');
-    }
-
-    public function broadcastWith()
-    {
-        return [
-            'serviceRequest' => $this->serviceRequest
-        ];
-    }
-
-    public function broadcastAs()
-    {
-        return 'service-requested';
     }
 }

@@ -62,6 +62,7 @@ class User extends Authenticatable
 
     public function routeNotificationForFcm()
     {
-        return FcmToken::where('user_id', $this->user_id)->pluck('token')->toArray();
+        return FcmToken::where('user_id', $this->user_id)
+            ->where('user_type','user')->pluck('token')->toArray();
     }
 }

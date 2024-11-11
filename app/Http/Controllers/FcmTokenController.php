@@ -16,18 +16,25 @@ class FcmTokenController extends Controller
         ]);
         $user = $request->user();
         $user_id=null;
+        $user_type=null;
         if ($user instanceof ServiceProvider) {
             $user_id= $user->provider_id;
+            $user_type='Provider';
         } elseif ($user instanceof User) {
             $user_id= $user->user_id;
+            $user_type='user';
         } else {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
         FcmToken::updateOrCreate(
-            ['user_id' => $user_id],
+            [
+                'user_id' => $user_id,
+                'user_type' => $user_type
+            ],
             [
                 'user_id' =>$user_id,
+                'user_type' => $user_type,
                 'token' => $validated['fcm_token']
             ]
         );
