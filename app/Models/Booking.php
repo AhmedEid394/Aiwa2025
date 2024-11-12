@@ -41,11 +41,11 @@ class Booking extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return User::findOrFail($this->user_id);
     }
 
     public function provider()
     {
-        return $this->belongsTo(ServiceProvider::class, 'user_id');
+        return ServiceProvider::findOrFail($this->user_id);;
     }
 }

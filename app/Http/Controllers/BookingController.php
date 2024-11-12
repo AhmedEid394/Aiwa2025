@@ -47,6 +47,11 @@ class BookingController extends Controller
 
         $booking = Booking::create($validatedData);
 
+        // Reload the booking with relations
+        $booking = Booking::with(['service', 'service.provider'])
+            ->where('booking_id', $booking->booking_id)
+            ->first();
+
         return response()->json($booking, 201);
     }
 
@@ -93,6 +98,7 @@ class BookingController extends Controller
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         }
+
         $oldStatus = $booking->status;
         $booking->update($validatedData);
         if ($oldStatus !== $booking->status) {

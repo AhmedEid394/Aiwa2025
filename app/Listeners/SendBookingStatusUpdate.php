@@ -5,6 +5,7 @@ namespace App\Listeners;
 use App\Notifications\BookingStatusNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\Log;
 
 class SendBookingStatusUpdate
 {
@@ -24,9 +25,11 @@ class SendBookingStatusUpdate
         $booking = $event->booking;
         $user=null;
         if($booking->user_type === 'user') {
-            $user = $booking->user()->first();
+            $user = $booking->user();
+            Log::info('user booking');
         }elseif($booking->user_type === 'Provider'){
-            $user = $booking->provider()->first();
+            $user = $booking->provider();
+            Log::info('provider booking');
         }
         if($user){
             $user->notify(new BookingStatusNotification($booking));

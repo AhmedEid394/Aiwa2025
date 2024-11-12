@@ -35,7 +35,6 @@ class ServiceRequestStatusNotification extends Notification
 
     public function toFcm($notifiable): FcmMessage
     {
-
         return (new FcmMessage(notification: new FcmNotification(
             title: $this->serviceRequest->title.' status updated',
             body: 'The status of the service is now '.$this->serviceRequest->status,
@@ -62,7 +61,6 @@ class ServiceRequestStatusNotification extends Notification
                     ],
                 ],
             ]);
-
     }
 
     /**

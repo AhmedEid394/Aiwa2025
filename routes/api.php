@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\FcmTokenController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ServiceProviderController;
@@ -157,6 +158,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/wallet', [WalletController::class, 'store']);
     Route::get('/wallet', [WalletController::class, 'show']);
     Route::put('/wallet', [WalletController::class, 'update']);
+
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread', [NotificationController::class, 'unread']);
+    Route::get('/notifications/unread/count', [NotificationController::class, 'unreadCount']);
+    Route::get('/notifications/with-count', [NotificationController::class, 'getNotificationsWithCount']);
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+
 
 });
 

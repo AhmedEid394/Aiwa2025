@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Events\BookingStatusUpdated;
 use App\Events\ServiceRequested;
 use App\Events\ServiceRequestStatusUpdated;
 use App\Events\SystemNotificationEvent;
+use App\Listeners\SendBookingStatusUpdate;
 use App\Listeners\SendServiceRequestStatusUpdate;
 use App\Listeners\SendSystemNotification;
 use App\Listeners\ServiceRequestedListener;
@@ -26,6 +28,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         ServiceRequested::class => [
             ServiceRequestedListener::class,
+        ],
+        BookingStatusUpdated::class=> [
+            SendBookingStatusUpdate::class,
         ],
         ServiceRequestStatusUpdated::class => [
             SendServiceRequestStatusUpdate::class,
