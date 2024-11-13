@@ -14,7 +14,6 @@ class ServiceController extends Controller
             $validatedData = $request->validate([
                 'title' => 'required|string|max:255',
                 'sub_category_id' => 'required|exists:sub_categories,sub_category_id',
-                'provider_id' => 'required|exists:service_providers,provider_id',
                 'description' => 'required|string',
                 'service_fee' => 'required|numeric|min:0',
                 'pictures' => 'nullable|array',
@@ -31,7 +30,7 @@ class ServiceController extends Controller
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         }
-
+        $validatedData['provider_id'] = auth()->user()->provider_id;
         $service = Service::create($validatedData);
 
         return response()->json($service, 201);

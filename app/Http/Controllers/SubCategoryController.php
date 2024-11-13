@@ -78,7 +78,7 @@ class SubCategoryController extends Controller
             $query->where('category_id', $request->category_id);
         }
 
-        $subCategories = $query->paginate(15);
+        $subCategories = $query->latest()->get();
         return response()->json($subCategories, 201);
     }
 
