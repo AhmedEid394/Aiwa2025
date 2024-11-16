@@ -109,10 +109,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/favourites/toggle', [FavouriteController::class, 'toggle']);
 
     // Chat route
+    Route::get('/chats', [ChatController::class, 'index']);
     Route::post('/chat', [ChatController::class, 'startChat']);
     Route::get('/chat/check', [ChatController::class, 'checkChatExists']);
-    Route::post('/chat/{chatId}/message', [ChatController::class, 'sendMessage']);
-    Route::get('/chat/{chatId}/messages', [ChatController::class, 'getMessages']);
+    Route::post('/chat/message', [ChatController::class, 'sendMessage']);
+    Route::get('/chat/messages', [ChatController::class, 'getMessages']);
     Route::delete('/chat/{messageId}', [ChatController::class, 'deleteMessage']);
 
     // PermissionType routes

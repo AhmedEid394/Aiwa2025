@@ -6,10 +6,12 @@ use App\Events\BookingStatusUpdated;
 use App\Events\ServiceRequested;
 use App\Events\ServiceRequestStatusUpdated;
 use App\Events\SystemNotificationEvent;
+use App\Events\MessageSent;
 use App\Listeners\SendBookingStatusUpdate;
 use App\Listeners\SendServiceRequestStatusUpdate;
 use App\Listeners\SendSystemNotification;
 use App\Listeners\ServiceRequestedListener;
+use App\Listeners\SendMessageNotification;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -25,6 +27,9 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         Registered::class => [
             SendEmailVerificationNotification::class,
+        ],
+        MessageSent::class => [
+                SendMessageNotification::class,
         ],
         ServiceRequested::class => [
             ServiceRequestedListener::class,
