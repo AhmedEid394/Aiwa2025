@@ -52,6 +52,7 @@ class ServiceProvider extends Model
     public function promoCodes(){
         return $this->hasMany(PromoCode::class, 'provider_id');
     }
+    
     public function papers()
     {
         return $this->hasMany(Paper::class, 'provider_id');
@@ -61,6 +62,7 @@ class ServiceProvider extends Model
     {
         return $this->hasMany(Chat::class, 'provider_id');
     }
+
     public function wallets()
     {
         return $this->hasMany(Wallet::class, 'provider_id');

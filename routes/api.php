@@ -72,7 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);
 
     // SubCategory routes
-    Route::post('/subcategories', [SubCategoryController::class, 'store']);
+    Route::post('/subcategories/create', [SubCategoryController::class, 'store']);
     Route::get('/subcategories/{id}', [SubCategoryController::class, 'show']);
     Route::put('/subcategories/{id}', [SubCategoryController::class, 'update']);
     Route::delete('/subcategories/{id}', [SubCategoryController::class, 'destroy']);
