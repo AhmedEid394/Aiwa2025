@@ -27,5 +27,18 @@ class ServiceRequest extends Model
         'pictures' => 'array',
     ];
 
+    public function user()
+    {
+        if ($this->user_type === 'user') {
+            return User::where('user_id', $this->user_id)->first();
+        }
+        else {
+            return ServiceProvider::where('provider_id', $this->user_id)->first();
+        }
+    }
 
+    public function subCategory()
+    {
+        return $this->belongsTo(SubCategory::class, 'sub_category_id', 'sub_category_id');
+    }
 }

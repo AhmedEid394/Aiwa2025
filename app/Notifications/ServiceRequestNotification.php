@@ -37,7 +37,6 @@ class ServiceRequestNotification extends Notification implements ShouldBroadcast
                 title: $this->serviceRequest->title,
                 body: $this->serviceRequest->description,
             )))
-                ->data(['data1' => 'value', 'data2' => 'value2'])
                 ->custom([
                     'android' => [
                         'notification' => [
@@ -64,10 +63,9 @@ class ServiceRequestNotification extends Notification implements ShouldBroadcast
 
     public function toArray($notifiable)
     {
-        return [
-            'title' => $this->serviceRequest->title,
-            'description' => $this->serviceRequest->description,
-        ];
+        $this->serviceRequest->load('subCategory');
+        $this->serviceRequest->user= $this->serviceRequest->user();
+        return $this->serviceRequest;
     }
     public function databaseType(object $notifiable): string
     {
