@@ -71,16 +71,20 @@ class SubCategoryController extends Controller
     }
 
     public function index(Request $request)
-    {
-        $query = SubCategory::with('category');
+{
+    $query = SubCategory::with('category');
 
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
-        }
-
-        $subCategories = $query->latest()->get();
-        return response()->json($subCategories, 201);
+    if ($request->has('category_id')) {
+        $query->where('category_id', $request->category_id);
     }
+
+    $subCategories = $query->get(); 
+
+    return response()->json([
+        'data' => $subCategories,
+        'success' => true
+    ], 200); 
+}
 
     public function services($id)
     {

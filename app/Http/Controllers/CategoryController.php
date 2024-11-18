@@ -68,7 +68,10 @@ class CategoryController extends Controller
 
     public function index()
     {
-        $categories = Category::with('subCategories')->paginate(15);
-        return response()->json($categories, 201);
+        $categories = Category::with('subCategories')->get();
+        return response()->json([
+            'data' => $categories,
+            'success' => true
+        ], 201); 
     }
 }
