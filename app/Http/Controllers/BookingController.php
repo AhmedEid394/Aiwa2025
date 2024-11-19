@@ -117,7 +117,7 @@ class BookingController extends Controller
         return response()->json(null, 204);
     }
 
-        public function index()
+    public function index()
     {
         $user = auth()->user();
 
@@ -138,4 +138,24 @@ class BookingController extends Controller
 
         return response()->json($bookings, 200);
     }
+
+    public function getProviderWorkOrders()
+    {
+        
+        $provider = auth()->user();
+
+        if (!($provider instanceof ServiceProvider)) {
+            return response()->json(['error' => 'Unauthorized. Only providers can access work orders'], 401);
+        }
+
+        $workOrders = Booking::whereHas('service', function ($query) use ($provider) {
+            $query->where('provider_id', $provider->provider_id);
+        })
+            ->with(['service', 'service.provider'])
+            ->orderBy('created_at', 'desc')
+            ->paginate();
+
+        return response()->json($workOrders, 200);
+    }
+
 }

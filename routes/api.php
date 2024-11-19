@@ -102,6 +102,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/bookings/{id}', [BookingController::class, 'update']);
     Route::delete('/bookings/{id}', [BookingController::class, 'destroy']);
     Route::get('/bookings', [BookingController::class, 'index']);
+    Route::get('/provider/work-orders', [BookingController::class, 'getProviderWorkOrders']);
 
     // Favourite routes
     Route::get('/favourites', [FavouriteController::class, 'index']);
@@ -147,7 +148,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/transactions/{id}', [TransactionController::class, 'show']);
     Route::put('/transactions/{id}', [TransactionController::class, 'update']);
     Route::delete('/transactions/{id}', [TransactionController::class, 'destroy']);
-
 
     //advartising images
     Route::get('/advertising-images', [AdvertisingImageController::class, 'index']);
