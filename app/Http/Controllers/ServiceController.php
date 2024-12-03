@@ -93,6 +93,7 @@ class ServiceController extends Controller
     {
         $query = Service::with(['SubCategory', 'Provider']);
 
+        // Apply filters if provided
         if ($request->has('sub_category_id')) {
             $query->where('sub_category_id', $request->sub_category_id);
         }
@@ -101,9 +102,47 @@ class ServiceController extends Controller
             $query->where('provider_id', $request->provider_id);
         }
 
-        $services = $query->paginate(15);
-        return response()->json($services);
+        $services = $query->get();
+
+        // Transforming the response with comprehensive details
+        $response = [
+            'data' => $services->map(function ($service) {
+                return [
+                    'service_id' => $service->service_id,
+                    'title' => $service->title,
+                    'description' => $service->description,
+                    'service_fee' => $service->service_fee,
+                    'pictures' => $service->pictures,
+                    'add_ons' => $service->add_ons,
+                    'sale_amount' => $service->sale_amount,
+                    'sale_percentage' => $service->sale_percentage,
+                    'down_payment' => $service->down_payment,
+                    'latitude' => $service->latitude,
+                    'longitude' => $service->longitude,
+                    'building' => $service->building,
+                    'apartment' => $service->apartment,
+                    'location_mark' => $service->location_mark,
+                    'created_at'=> $service->created_at,
+                    'sub_category' => [
+                        'sub_category_id' => $service->SubCategory->sub_category_id ?? null,
+                        'name' => $service->SubCategory->name ?? null,
+                        'image' => $service->SubCategory->image ?? null,
+                    ],
+                    'provider' => [
+                        'provider_id' => $service->Provider->provider_id ?? null,
+                        'f_name' => $service->Provider->f_name ?? null,
+                        'l_name' => $service->Provider->l_name ?? null,
+                        'company_name' => $service->Provider->company_name ?? null,
+                        'profile_photo' => $service->Provider->profile_photo ?? null,
+                    ],
+                ];
+            }),
+            'success' => true,
+        ];
+
+        return response()->json($response, 200, [], JSON_UNESCAPED_SLASHES);
     }
+
 
     public function search(Request $request)
     {
@@ -133,7 +172,8 @@ class ServiceController extends Controller
             $query->whereRaw("(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) < ?", [$lat, $lon, $lat, $radius]);
         }
 
-        $services = $query->with(['SubCategory', 'Provider'])->paginate(15);
-        return response()->json($services);
+        $services = $query->with(['SubCategory', 'Provider'])->get();
+        return response()->json(['data' => $services, 'success' => true], 200, ['Content-Type' => 'application/vnd.api+json'],  JSON_UNESCAPED_SLASHES);
     }
+    
 }

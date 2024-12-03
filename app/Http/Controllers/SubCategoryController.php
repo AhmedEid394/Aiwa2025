@@ -29,7 +29,7 @@ class SubCategoryController extends Controller
 
     public function show($id)
     {
-        $subCategory = SubCategory::with(['category', 'services'])->find($id);
+        $subCategory = SubCategory::with(['category'])->find($id);
         if (!$subCategory) {
             return response()->json(['error' => 'Sub-category not found'], 404);
         }
@@ -71,20 +71,21 @@ class SubCategoryController extends Controller
     }
 
     public function index(Request $request)
-{
-    $query = SubCategory::with('category');
-
-    if ($request->has('category_id')) {
-        $query->where('category_id', $request->category_id);
+    {
+        $query = SubCategory::select('sub_category_id', 'name','category_id'); 
+    
+        if ($request->has('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+    
+        $subCategories = $query->get();
+    
+        return response()->json([
+            'data' => $subCategories,
+            'success' => true
+        ], 200);
     }
-
-    $subCategories = $query->get(); 
-
-    return response()->json([
-        'data' => $subCategories,
-        'success' => true
-    ], 200); 
-}
+    
 
     public function services($id)
     {

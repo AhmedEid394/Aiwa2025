@@ -30,8 +30,8 @@ class FavouriteController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $favourites = Favourite::with('service')->where('user_id', $userId)->paginate(15);
-        return response()->json($favourites, 201);
+        $favourites = Favourite::with('service')->where('user_id', $userId)->get();
+        return response()->json(['data' => $favourites, 'success' => true], 200, ['Content-Type' => 'application/vnd.api+json'],  JSON_UNESCAPED_SLASHES);
     }
 
     public function toggle(Request $request)

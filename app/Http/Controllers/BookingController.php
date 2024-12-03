@@ -93,7 +93,7 @@ class BookingController extends Controller
                 'service_price' => 'sometimes|numeric|min:0',
                 'total_price' => 'sometimes|numeric|min:0',
                 'promo_code' => 'nullable|string',
-                'status' => 'sometimes|in:request,accepted,rejected,done',
+                'status' => 'sometimes|in:request,accepted,accepted but not payed,rejected,done',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
@@ -134,9 +134,9 @@ class BookingController extends Controller
         }
 
         // Get paginated results
-        $bookings = $query->paginate(15);
+        $bookings = $query->orderByRaw('created_at')->get();
 
-        return response()->json($bookings, 200);
+        return response()->json(['data' => $bookings,'success' => true],200, ['Content-Type' => 'application/vnd.api+json'],  JSON_UNESCAPED_SLASHES);
     }
 
     public function getProviderWorkOrders()
@@ -153,9 +153,10 @@ class BookingController extends Controller
         })
             ->with(['service', 'service.provider'])
             ->orderBy('created_at', 'desc')
-            ->paginate();
+            ->get();
 
-        return response()->json($workOrders, 200);
+        return response()->json(['data' => $workOrders,'success' => true],200, ['Content-Type' => 'application/vnd.api+json'],  JSON_UNESCAPED_SLASHES);
     }
+
 
 }

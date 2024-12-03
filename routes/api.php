@@ -18,6 +18,7 @@ use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\AdvertisingImageController;
 use App\Http\Controllers\BankController;
 use App\Http\Controllers\BmCashoutPrepareController;
+use App\Http\Controllers\PaymentServicesController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\TransactionController;
 use Illuminate\Http\Request;
@@ -92,7 +93,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/services/{id}', [ServiceController::class, 'show']);
     Route::put('/services/{id}', [ServiceController::class, 'update']);
     Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
-    Route::get('/services', [ServiceController::class, 'index']);
+    Route::post('/services/show', [ServiceController::class, 'index']);
     Route::post('/services/search', [ServiceController::class, 'search']);
 
 
@@ -160,6 +161,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/wallet', [WalletController::class, 'show']);
     Route::put('/wallet', [WalletController::class, 'update']);
 
+    //notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::get('/notifications/unread', [NotificationController::class, 'unread']);
     Route::get('/notifications/unread/count', [NotificationController::class, 'unreadCount']);
@@ -168,6 +170,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 
+    //Geidea payment
+    Route::post('/payment/create-session', [PaymentServicesController::class, 'createSession']);
+    Route::post('/payment/callback', [PaymentServicesController::class, 'paymentCallback']);
+
+    Route::get('/topOffers', [Controller::class, 'getTopSuggestedServices']);
 
 });
 

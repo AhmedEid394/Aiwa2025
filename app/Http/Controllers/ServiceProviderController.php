@@ -61,7 +61,7 @@ class ServiceProviderController extends Controller
     public function login(Request $request)
     {
         try {
-            $request->validate([
+            $request->validate( [
                 'phone' => 'required|string',
                 'password' => 'required|string',
             ]);
@@ -123,8 +123,8 @@ class ServiceProviderController extends Controller
             $validatedData = $request->validate([
                 'f_name' => 'sometimes|string|max:255',
                 'l_name' => 'sometimes|string|max:255',
-                'email' => 'sometimes|string|email|max:255|unique:service_providers,email,' . $provider->id,
-                'phone' => 'sometimes|string|unique:service_providers,phone,' . $provider->id,
+                'email' => 'sometimes|string|email|max:255|unique:service_providers,email,' . $provider->provider_id. ',provider_id',
+                'phone' => 'sometimes|string|unique:service_providers,phone,' . $provider->provider_id. ',provider_id',
                 'provider_type' => 'sometimes|in:freelance,corporate',
                 'birthday' => 'sometimes|date',
                 'nationality' => 'sometimes|in:egyptian,foreigner',
@@ -142,7 +142,7 @@ class ServiceProviderController extends Controller
 
         $provider->update($validatedData);
 
-        return response()->json($provider);
+        return response()->json($provider,200);
     }
 
     // Remove a specific service provider

@@ -25,7 +25,7 @@ class CreateBookingsTable extends Migration
             $table->decimal('service_price', 10, 2);
             $table->decimal('total_price', 10, 2);
             $table->string('promo_code')->nullable();
-            $table->enum('status', ['request', 'accepted but not payed ','accepted', 'rejected', 'done'])->default('request');
+            $table->enum('status', ['request', 'accepted but not payed','accepted', 'rejected', 'done'])->default('request');
             $table->timestamps();
         });
     }

@@ -85,7 +85,7 @@ class UserController extends Controller
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
         }
-        return response()->json($user);
+        return response()->json(['data' => $user,'success' => true], 200, ['Content-Type' => 'application/vnd.api+json'],  JSON_UNESCAPED_SLASHES);
     }
 
     public function update(Request $request)
@@ -114,7 +114,7 @@ class UserController extends Controller
 
         $user->update($validatedData);
 
-        return response()->json($user);
+        return response()->json(['data' => $user,'success' => true],200, ['Content-Type' => 'application/vnd.api+json'], JSON_UNESCAPED_SLASHES);
     }
 
     public function destroy()
