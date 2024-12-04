@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\FcmTokenController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\RatingController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ServiceProviderController;
@@ -182,6 +183,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{id}', [\App\Http\Controllers\AddressesController::class, 'show']);
         Route::put('/{id}', [\App\Http\Controllers\AddressesController::class, 'update']);
         Route::delete('/{id}', [\App\Http\Controllers\AddressesController::class, 'destroy']);
+    });
+
+    Route::group(['prefix'=>'ratings'], function () {
+        Route::post('/', [RatingController::class, 'store']);
+        Route::get('/', [RatingController::class, 'index']);
+        Route::get('/average/{provider_id}', [RatingController::class, 'averageRating']);
     });
 
 });
