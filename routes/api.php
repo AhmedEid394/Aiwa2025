@@ -176,6 +176,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/topOffers', [Controller::class, 'getTopSuggestedServices']);
 
+    Route::group(['prefix' => 'addresses'], function () {
+        Route::get('/', [\App\Http\Controllers\AddressesController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\AddressesController::class, 'store']);
+        Route::get('/{id}', [\App\Http\Controllers\AddressesController::class, 'show']);
+        Route::put('/{id}', [\App\Http\Controllers\AddressesController::class, 'update']);
+        Route::delete('/{id}', [\App\Http\Controllers\AddressesController::class, 'destroy']);
+    });
+
 });
 
 // Service Provider routes
