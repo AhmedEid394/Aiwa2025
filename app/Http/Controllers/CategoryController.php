@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\SubCategory;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -35,6 +36,17 @@ class CategoryController extends Controller
 
         return response()->json(['data' => $category, 'success' => true], 200, ['Content-Type' => 'application/vnd.api+json'],  JSON_UNESCAPED_SLASHES);
     }
+
+    public function subCategory()
+    {
+        $subCategories = SubCategory::select('sub_category_id', 'name','image')->get();
+    
+        return response()->json([
+            'data' => $subCategories,
+            'success' => true
+        ], 200, ['Content-Type' => 'application/vnd.api+json'], JSON_UNESCAPED_SLASHES);
+    }    
+    
 
     public function update(Request $request, $id)
     {

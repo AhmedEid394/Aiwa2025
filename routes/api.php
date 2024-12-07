@@ -49,6 +49,7 @@ Route::post('/pusher/auth', function (Request $request, PusherService $pusherSer
     return response()->json($data);
 })->middleware('auth:sanctum');
 
+
 // routes/api.php
 Route::middleware('auth:sanctum')->post('/update-fcm-token', [FcmTokenController::class, 'update']);
 
@@ -57,6 +58,9 @@ Route::post('/users/register', [UserController::class, 'register']);
 Route::post('/users/login', [UserController::class, 'login']);
 Route::post('/login', [Controller::class, 'login']);
 
+
+Route::get('/categories/{id}', [CategoryController::class, 'show']);
+Route::get('/subcategories', [SubCategoryController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/logout', [UserController::class, 'logout']);
@@ -67,14 +71,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Category routes
     Route::post('/categories', [CategoryController::class, 'store']);
-    Route::get('/categories/{id}', [CategoryController::class, 'show']);
     Route::put('/categories/{id}', [CategoryController::class, 'update']);
     Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
     Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/subCategories', [CategoryController::class, 'subCategory']);
 
     // SubCategory routes
     Route::post('/subcategories/create', [SubCategoryController::class, 'store']);
     Route::get('/subcategories/{id}', [SubCategoryController::class, 'show']);
+    
     Route::put('/subcategories/{id}', [SubCategoryController::class, 'update']);
     Route::delete('/subcategories/{id}', [SubCategoryController::class, 'destroy']);
     Route::get('/subcategories', [SubCategoryController::class, 'index']);

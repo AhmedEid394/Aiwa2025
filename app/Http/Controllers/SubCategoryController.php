@@ -83,7 +83,7 @@ class SubCategoryController extends Controller
         return response()->json([
             'data' => $subCategories,
             'success' => true
-        ], 200);
+        ],200, ['Content-Type' => 'application/vnd.api+json'],  JSON_UNESCAPED_SLASHES);
     }
     
 
