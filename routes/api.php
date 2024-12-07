@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\FcmTokenController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\RatingController;
+use App\Http\Controllers\ResetPasswordController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ServiceProviderController;
@@ -181,6 +183,20 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/topOffers', [Controller::class, 'getTopSuggestedServices']);
 
+    Route::group(['prefix' => 'addresses'], function () {
+        Route::get('/', [\App\Http\Controllers\AddressesController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\AddressesController::class, 'store']);
+        Route::get('/{id}', [\App\Http\Controllers\AddressesController::class, 'show']);
+        Route::put('/{id}', [\App\Http\Controllers\AddressesController::class, 'update']);
+        Route::delete('/{id}', [\App\Http\Controllers\AddressesController::class, 'destroy']);
+    });
+
+    Route::group(['prefix'=>'ratings'], function () {
+        Route::post('/', [RatingController::class, 'store']);
+        Route::get('/', [RatingController::class, 'index']);
+        Route::get('/average/{provider_id}', [RatingController::class, 'averageRating']);
+    });
+
 });
 
 // Service Provider routes
@@ -193,3 +209,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/providers/profile', [ServiceProviderController::class, 'update']);
     Route::delete('/providers/profile', [ServiceProviderController::class, 'destroy']);
 });
+
+// Route to check email and send OTP
+Route::post('/password/check-email', [ResetPasswordController::class, 'checkEmail']);
+
+// Route to confirm OTP
+Route::post('/password/confirm-otp', [ResetPasswordController::class, 'confirmOtp']);
+
+// Route to reset password
+Route::post('/password/reset-password', [ResetPasswordController::class, 'reset']);

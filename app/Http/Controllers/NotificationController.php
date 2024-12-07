@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Notifications\DatabaseNotification;
+use function Symfony\Component\Translation\t;
 
 class NotificationController extends Controller
 {
@@ -103,15 +104,22 @@ class NotificationController extends Controller
      *
      * @return JsonResponse
      */
-    public function markAllAsRead()
+    public function markAllAsRead(Request $request)
     {
-        auth()->user()->unreadNotifications->markAsRead();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'All notifications marked as read',
-            'unread_count' => 0
-        ]);
+        try {
+           $request->user()->unreadNotifications->markAsRead();
+            return response()->json([
+                'success' => true,
+                'message' => 'All notifications marked as read',
+                'unread_count' => 0
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to mark all notifications as read '.$e->getMessage()
+            ], 500);
+        }
     }
 
     /**
