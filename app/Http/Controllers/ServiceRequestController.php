@@ -7,6 +7,7 @@ use App\Events\ServiceRequestStatusUpdated;
 use App\Models\ServiceProvider;
 use App\Models\ServiceRequest;
 use App\Models\User;
+use App\Models\Booking;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -41,6 +42,7 @@ class ServiceRequestController extends Controller
         }
 
         $serviceRequest = ServiceRequest::create($validatedData);
+
         event(new ServiceRequested($serviceRequest));
         return response()->json($serviceRequest, 201);
     }
@@ -130,7 +132,7 @@ class ServiceRequestController extends Controller
         if (!$serviceRequest) {
             return response()->json(['error' => 'Service request not found'], 404);
         }
-
+    
         try {
             $validatedData = $request->validate([
                 'status' => 'required|string|in:pending,accepted,rejected,completed',
@@ -138,10 +140,13 @@ class ServiceRequestController extends Controller
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         }
-
+    
+        // Update service request status
         $serviceRequest->update($validatedData);
         event(new ServiceRequestStatusUpdated($serviceRequest));
 
-        return response()->json($serviceRequest, 201);
+        return response()->json([
+            'service_request' => $serviceRequest
+        ], 201);
     }
 }

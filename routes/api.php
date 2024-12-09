@@ -23,8 +23,9 @@ use App\Http\Controllers\BmCashoutPrepareController;
 use App\Http\Controllers\PaymentServicesController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\TransactionController;
-use Illuminate\Http\Request;
-use App\Services\PusherService;
+use App\Http\Controllers\PaperController;
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -36,21 +37,6 @@ use App\Services\PusherService;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
-
-
-// Pusher Routes
-Route::post('/pusher/auth', function (Request $request, PusherService $pusherService) {
-    $user = $request->user();
-    $channel_name = $request->channel_name;
-    $socket_id = $request->socket_id;
-
-    $data = $pusherService->getPusherClient()->presence_auth($channel_name, $socket_id, $user->id, [
-        'name' => $user->name,
-    ]);
-
-    return response()->json($data);
-})->middleware('auth:sanctum');
-
 
 // routes/api.php
 Route::middleware('auth:sanctum')->post('/update-fcm-token', [FcmTokenController::class, 'update']);
@@ -196,6 +182,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [RatingController::class, 'index']);
         Route::get('/average/{provider_id}', [RatingController::class, 'averageRating']);
     });
+
+    Route::post('/papers/upload', [PaperController::class, 'uploadPapers']);
+    Route::get('/papers', [PaperController::class, 'getPapers']);
+    Route::get('/verify-status', [PaperController::class, 'checkVerification']);
 
 });
 

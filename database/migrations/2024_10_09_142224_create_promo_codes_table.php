@@ -22,7 +22,6 @@ use Illuminate\Support\Facades\Schema;
           $table->foreign('service_id')->references('service_id')->on('services')->onDelete('cascade');// FK to categories// The booked service
           $table->timestamps(); 
 
-          // Foreign key constraints
       });
   }
 

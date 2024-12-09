@@ -13,13 +13,12 @@ use Illuminate\Support\Facades\Schema;
     {
       Schema::create('papers', function (Blueprint $table) {
           $table->id('paper_id'); // Auto-incrementing ID
-          $table->unsignedBigInteger('provider_id')->nullable(); // Foreign key for service provider
-          $table->foreign('provider_id')->references('provider_id')->on('service_providers')->onDelete('cascade');
-          $table->unsignedBigInteger('user_id')->nullable(); 
-          $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
-          $table->string('front_photo')->nullable(); 
-          $table->string('back_photo')->nullable(); 
-          $table->boolean('is_verified')->default(false);
+          $table->string('user_type');
+          $table->unsignedBigInteger('user_id');
+          $table->longText('front_photo')->nullable(); 
+          $table->longText('back_photo')->nullable(); 
+          $table->longText('criminal_record_photo')->nullable();
+          $table->enum('status', ['pending','accepted', 'rejected'])->default('pending');
           $table->text('notes')->nullable(); 
           $table->timestamps(); 
       });

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\WalletController;
+use App\Http\Controllers\ChatController;
 use App\Events\BookingStatusUpdated;
 use App\Models\Booking;
 use Illuminate\Http\Request;
@@ -74,39 +77,81 @@ class BookingController extends Controller
     }
 
     public function update(Request $request, $id)
-    {
-        $booking = Booking::find($id);
-        if (!$booking) {
-            return response()->json(['error' => 'Booking not found'], 404);
-        }
-
-        try {
-            $validatedData = $request->validate([
-                'add_ons' => 'nullable|array',
-                'building_number' => 'sometimes|string',
-                'apartment' => 'sometimes|string',
-                'location_mark' => 'sometimes|string',
-                'latitude' => 'sometimes|numeric',
-                'longitude' => 'sometimes|numeric',
-                'booking_date' => 'sometimes|date',
-                'booking_time' => 'sometimes|date_format:H:i',
-                'service_price' => 'sometimes|numeric|min:0',
-                'total_price' => 'sometimes|numeric|min:0',
-                'promo_code' => 'nullable|string',
-                'status' => 'sometimes|in:request,accepted,accepted but not payed,rejected,done',
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json(['errors' => $e->errors()], 422);
-        }
-
-        $oldStatus = $booking->status;
-        $booking->update($validatedData);
-        if ($oldStatus !== $booking->status) {
-            event(new BookingStatusUpdated($booking));
-        }
-        return response()->json($booking, 200);
+{
+    $booking = Booking::find($id);
+    if (!$booking) {
+        return response()->json(['error' => 'Booking not found'], 404);
     }
 
+    try {
+        $validatedData = $request->validate([
+            'add_ons' => 'nullable|array',
+            'building_number' => 'sometimes|string',
+            'apartment' => 'sometimes|string',
+            'location_mark' => 'sometimes|string',
+            'latitude' => 'sometimes|numeric',
+            'longitude' => 'sometimes|numeric',
+            'booking_date' => 'sometimes|date',
+            'booking_time' => 'sometimes|date_format:H:i',
+            'service_price' => 'sometimes|numeric|min:0',
+            'total_price' => 'sometimes|numeric|min:0',
+            'promo_code' => 'nullable|string',
+            'status' => 'sometimes|in:request,accepted,accepted but not payed,rejected,done',
+        ]);
+    } catch (ValidationException $e) {
+        return response()->json(['errors' => $e->errors()], 422);
+    }
+
+    $oldStatus = $booking->status;
+    $booking->update($validatedData);
+
+    // Check for status change
+    if ($oldStatus !== $booking->status) {
+        event(new BookingStatusUpdated($booking));
+
+        // If status is updated to 'done'
+        if ($booking->status === 'done') {
+            // Generate a random transaction reference
+            $transactionRef = 'TR-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 10));
+            
+            // Create transaction record
+            $transactionController = new TransactionController();
+            $transactionRequest = new Request([
+                'transaction_type' => 'cash_in',
+                'service_id' => $booking->service_id,
+                'booking_id' => $booking->booking_id,
+                'amount' => $booking->total_price,
+                'status' => 'completed',
+                'transaction_reference' => $transactionRef
+            ]);
+            $transactionController->store($transactionRequest);
+        }
+
+        // If status is updated to 'accepted'
+        if ($booking->status === 'accepted') {
+            // Calculate provider's earnings (86% of total price)
+            $providerEarnings = $booking->total_price * 0.86;
+
+            // Update provider's wallet
+            $walletController = new WalletController();
+            $walletRequest = new Request([
+                'total_amount' => $providerEarnings,
+                'available_amount' => $providerEarnings
+            ]);
+            $walletController->update($walletRequest);
+
+            // Start chat between user and provider
+            $chatController = new ChatController();
+            $chatRequest = new Request([
+                'user_id' => $booking->user_id,
+                'provider_id' => $booking->service->provider_id
+            ]);
+            $chatController->startChat($chatRequest);
+        }
+    }
+
+    return response()->json($booking, 200);
+}
     public function destroy($id)
     {
         $booking = Booking::find($id);
