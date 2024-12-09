@@ -67,7 +67,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // SubCategory routes
     Route::post('/subcategories/create', [SubCategoryController::class, 'store']);
     Route::get('/subcategories/{id}', [SubCategoryController::class, 'show']);
-    
+
     Route::put('/subcategories/{id}', [SubCategoryController::class, 'update']);
     Route::delete('/subcategories/{id}', [SubCategoryController::class, 'destroy']);
     Route::get('/subcategories', [SubCategoryController::class, 'index']);
@@ -80,7 +80,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/service-requests/{id}', [ServiceRequestController::class, 'destroy']);
     Route::get('/service-requests', [ServiceRequestController::class, 'index']);
     Route::put('/service-requests/{id}/status', [ServiceRequestController::class, 'updateStatus']);
-
+    Route::get('/provider/accepted-requests', [ServiceRequestController::class, 'getProviderAcceptedRequests']);
+    Route::get('/auth-user/requests', [ServiceRequestController::class, 'getAuthUserRequests']);
     // Service routes
     Route::post('/services', [ServiceController::class, 'store']);
     Route::get('/services/{id}', [ServiceController::class, 'show']);
@@ -97,7 +98,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/bookings/{id}', [BookingController::class, 'destroy']);
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::get('/provider/work-orders', [BookingController::class, 'getProviderWorkOrders']);
-
     // Favourite routes
     Route::get('/favourites', [FavouriteController::class, 'index']);
     Route::get('/favourites/{id}', [FavouriteController::class, 'show']);

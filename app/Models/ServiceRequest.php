@@ -11,6 +11,7 @@ class ServiceRequest extends Model
     protected $fillable = [
         'user_id',
         'user_type',
+        'provider_id',
         'sub_category_id',
         'title',
         'description',
@@ -19,6 +20,9 @@ class ServiceRequest extends Model
         'expected_cost',
         'pictures',
         'status',
+        'building_number',
+        'apartment',
+        'location_mark',
     ];
 
     protected $casts = [

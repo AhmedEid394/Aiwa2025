@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ServiceRequest;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use App\Models\GeideaPayment;
@@ -99,10 +101,21 @@ class PaymentServicesController extends Controller
         try {
             // Validate input
             $validatedData = $this->validateRequest($request);
-
+            $user = auth()->user();
+            if($user instanceof User){
+                $validatedData['user_send_type'] = 'user';
+            }
+            else{
+                $validatedData['user_send_type'] = 'provider';
+            }
             // Retrieve booking
-            $reservation = Booking::where('booking_id',$validatedData['Booking_id'])->first();
-
+            $reservation = null;
+            if($validatedData['type']=='booking'){
+                $reservation = Booking::where('booking_id',$validatedData['Booking_id'])->first();
+            }
+            else{
+                $reservation = ServiceRequest::where('request_id',$validatedData['Booking_id'])->first();
+            }
             // Calculate fees and total amount
             $amount = $validatedData['amount'];
             $fees = $this->calculateAllFees($amount);
@@ -141,7 +154,8 @@ class PaymentServicesController extends Controller
             'Booking_id' => 'required',
             'user_send_id' => 'required',
             'user_receive_id' => 'required',
-            'amount' => 'required|numeric|min:0'
+            'amount' => 'required|numeric|min:0',
+            'type' => 'required'
         ]);
     }
 
@@ -180,17 +194,17 @@ class PaymentServicesController extends Controller
         try {
             // Initialize cURL
             $ch = curl_init(self::BASE_URL . '/payment-intent/api/v2/direct/session');
-    
+
             // Prepare headers
             $headers = [
                 'Authorization: Basic ' . base64_encode(self::MERCHANT_PUBLIC_KEY . ':' . self::API_PASSWORD),
                 'Accept: application/json',
                 'Content-Type: application/json'
             ];
-    
+
             // Prepare JSON payload
             $jsonPayload = json_encode($sessionData);
-    
+
             // Set cURL options
             curl_setopt_array($ch, [
                 CURLOPT_POST => true,
@@ -202,23 +216,23 @@ class PaymentServicesController extends Controller
                 CURLOPT_SSL_VERIFYPEER => true, // Verify SSL certificate
                 CURLOPT_SSL_VERIFYHOST => 2, // Verify hostname in SSL certificate
             ]);
-    
+
             // Execute request
             $response = curl_exec($ch);
-    
+
             // Check for cURL errors
             if ($response === false) {
                 $curlError = curl_error($ch);
                 $curlErrno = curl_errno($ch);
-    
+
                 // Log the cURL error
                 Log::error('Geidea API cURL Error', [
                     'error_message' => $curlError,
                     'error_number' => $curlErrno
                 ]);
-    
+
                 curl_close($ch);
-    
+
                 return [
                     'status' => 'error',
                     'message' => 'API Request Failed',
@@ -226,23 +240,23 @@ class PaymentServicesController extends Controller
                     'curl_errno' => $curlErrno
                 ];
             }
-    
+
             // Get HTTP status code
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    
+
             // Close cURL resource
             curl_close($ch);
-    
+
             // Decode JSON response
             $responseData = json_decode($response, true);
-    
+
             // Additional error checking
             if ($httpCode !== 200) {
                 Log::warning('Geidea API Non-200 Response', [
                     'http_code' => $httpCode,
                     'response' => $responseData ?? $response
                 ]);
-    
+
                 return [
                     'status' => 'error',
                     'message' => 'API Request Failed',
@@ -250,29 +264,29 @@ class PaymentServicesController extends Controller
                     'response' => $responseData ?? $response
                 ];
             }
-    
+
             // Validate response structure
             if (!isset($responseData['session'])) {
                 Log::error('Invalid API Response Structure', [
                     'response' => $responseData
                 ]);
-    
+
                 return [
                     'status' => 'error',
                     'message' => 'Invalid API Response',
                     'raw_response' => $responseData
                 ];
             }
-    
+
             return $responseData;
-    
+
         } catch (\Exception $e) {
             // Catch any unexpected errors
             Log::error('Unexpected Error in Geidea API Request', [
                 'error_message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-    
+
             return [
                 'status' => 'error',
                 'message' => 'Unexpected error occurred',
@@ -286,13 +300,13 @@ class PaymentServicesController extends Controller
      *
      * @param array $responseData
      * @param array $validatedData
-     * @param Booking $reservation
+     * @param Booking| ServiceRequest $reservation
      * @param float $amount
      * @param array $fees
      * @return \Illuminate\Http\JsonResponse
      */
-    private function processGeideaResponse(array $responseData, array $validatedData, Booking $reservation, float $amount, array $fees)
-    {    
+    private function processGeideaResponse(array $responseData, array $validatedData,Booking|ServiceRequest $reservation, float $amount, array $fees)
+    {
         if ($responseData['responseMessage'] === 'Success') {
 
             $paymentRecord = GeideaPayment::create([
@@ -304,8 +318,9 @@ class PaymentServicesController extends Controller
                 'tax_14_percent' => $fees['tax'],
                 'total_amount' => $fees['totalAmount'],
                 'cash_in' => true,
-                'reservation_id' => $reservation->booking_id,
+                'reservation_id' => $reservation->booking_id ?? $reservation->request_id,
                 'user_send_id' => $validatedData['user_send_id'],
+                'user_send_type' => $validatedData['user_send_type'],
                 'user_receive_id' => $validatedData['user_receive_id'],
                 'payment_intent_id' => $responseData['session']['paymentIntentId'],
                 'merchant_reference_id' => $responseData['session']['merchantReferenceId']
@@ -364,7 +379,7 @@ public function paymentCallback(Request $request)
         $payment = GeideaPayment::where('session_id', $sessionId)->first();
         if ($payment) {
             $reservation = Booking::find($payment->reservation_id);
-            
+
             // Update reservation status based on payment status
             if ($response['order']['status'] === 'Paid') {
                 $reservation->status = 'accepted';
@@ -375,7 +390,7 @@ public function paymentCallback(Request $request)
     } catch (\Exception $e) {
         // Log error
         Log::error('Payment Callback Error: ' . $e->getMessage());
-        
+
         return response()->json(['status' => 'error'], 500);
     }
 }

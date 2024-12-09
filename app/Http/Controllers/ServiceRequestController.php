@@ -22,9 +22,12 @@ class ServiceRequestController extends Controller
                 'description' => 'required|string',
                 'date_of_done' => 'required|date',
                 'location' => 'required|string',
+                'building_number' => 'required|string',
+                'apartment' => 'required|string',
+                'location_mark' => 'required|string',
                 'expected_cost' => 'required|numeric|min:0',
                 'pictures' => 'nullable|array',
-                'status' => 'required|string|in:pending,accepted,rejected,completed',
+                'status' => 'required|string|in:request,accepted,rejected,done,accepted but not payed',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
@@ -71,11 +74,12 @@ class ServiceRequestController extends Controller
                 'location' => 'sometimes|string',
                 'expected_cost' => 'sometimes|numeric|min:0',
                 'pictures' => 'nullable|array',
-                'status' => 'sometimes|string|in:pending,accepted,rejected,completed',
+                'status' => 'sometimes|string|in:request,accepted,rejected,done,accepted but not payed',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         }
+        $validatedData['provider_id'] = auth()->user()->provider_id;
         $oldStatus = $serviceRequest->status;
         $serviceRequest->update($validatedData);
         if ($oldStatus !== $serviceRequest->status) {
@@ -132,15 +136,15 @@ class ServiceRequestController extends Controller
         if (!$serviceRequest) {
             return response()->json(['error' => 'Service request not found'], 404);
         }
-    
+
         try {
             $validatedData = $request->validate([
-                'status' => 'required|string|in:pending,accepted,rejected,completed',
+                'status' => 'required|string|in:request,accepted,rejected,done,accepted but not payed',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         }
-    
+        $validatedData['provider_id'] = auth()->user()->provider_id;
         // Update service request status
         $serviceRequest->update($validatedData);
         event(new ServiceRequestStatusUpdated($serviceRequest));
@@ -149,4 +153,44 @@ class ServiceRequestController extends Controller
             'service_request' => $serviceRequest
         ], 201);
     }
+
+    public function getProviderAcceptedRequests(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user instanceof ServiceProvider) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $serviceRequests = ServiceRequest::where('provider_id', $user->provider_id)
+            ->where('status', 'accepted')
+            ->orWhere('status', 'accepted but not payed')->latest()->get();
+
+        return response()->json([
+            'data' => $serviceRequests,
+            'status' => 200,
+        ], 200);
+    }
+
+    public function getAuthUserRequests(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user instanceof User) {
+            $serviceRequests = ServiceRequest::where('user_id', $user->provider_id)->
+            where('user_type','Provider')->latest()->get();
+            return response()->json([
+                'data' => $serviceRequests,
+                'status' => 200,
+            ], 200);
+        }
+
+        $serviceRequests = ServiceRequest::where('user_id', $user->user_id)->
+        where('user_type','user')->latest()->get();
+
+        return response()->json([
+            'data' => $serviceRequests,
+            'status' => 200,
+        ], 200);
+
+    }
+
 }
