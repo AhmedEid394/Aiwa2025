@@ -37,7 +37,13 @@ class CloudImageService
      */
     public function upload(string $imagePath, array $options = []): ApiResponse
     {
-        $uploadApi = new UploadApi();
-        return $uploadApi->upload($imagePath, $options);
+        try {
+            $uploadApi = new UploadApi();
+            return $uploadApi->upload($imagePath, $options);
+        } catch (ApiError $e) {
+            // Log the error
+            Log::error('Failed to upload image to Cloudinary', ['error' => $e->getMessage()]);
+            throw $e;
+        }
     }
 }

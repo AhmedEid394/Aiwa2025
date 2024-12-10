@@ -196,7 +196,7 @@ Route::post('/providers/login', [ServiceProviderController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/providers/logout', [ServiceProviderController::class, 'logout']);
     Route::get('/providers/profile', [ServiceProviderController::class, 'show']);
-    Route::put('/providers/profile', [ServiceProviderController::class, 'update']);
+    Route::post('/providers/profile', [ServiceProviderController::class, 'update']);
     Route::delete('/providers/profile', [ServiceProviderController::class, 'destroy']);
 });
 
