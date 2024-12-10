@@ -53,7 +53,7 @@ Route::get('/subcategories', [SubCategoryController::class, 'index']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/logout', [UserController::class, 'logout']);
     Route::get('/users/profile', [UserController::class, 'show']);
-    Route::put('/users/profile', [UserController::class, 'update']);
+    Route::post('/users/profile', [UserController::class, 'update']);
     Route::delete('/users/profile', [UserController::class, 'destroy']);
 
 
