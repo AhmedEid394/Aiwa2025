@@ -27,6 +27,7 @@ class ServiceRequestController extends Controller
             $validatedData = $request->validate([
                 'sub_category_id' => 'required|exists:sub_categories,sub_category_id',
                 'title' => 'required|string|max:255',
+                'date_of_done' => 'required|date',
                 'description' => 'required|string',
                 'location' => 'required|string',
                 'building_number' => 'required|string',
@@ -41,7 +42,7 @@ class ServiceRequestController extends Controller
             Log::error('Failed to validate service request', ['error' => $e->errors()]);
             return response()->json(['errors' => $e->errors()], 422);
         }
-        $validatedData['date_of_done'] = $request->input('formattedDate');
+
         $user = auth()->user();
         if ($user instanceof ServiceProvider) {
             $validatedData['user_type'] = 'Provider';

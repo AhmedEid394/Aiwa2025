@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Paper;
+use App\Services\CloudImageService;
 use Illuminate\Http\Request;
 use App\Models\ServiceProvider;
 use App\Models\User;
@@ -11,14 +12,20 @@ use Illuminate\Validation\ValidationException;
 
 class PaperController extends Controller
 {
+    protected $cloudImageService;
+
+    public function __construct(CloudImageService $cloudImageService)
+    {
+        $this->cloudImageService = $cloudImageService;
+    }
     public function uploadPapers(Request $request)
     {
         try {
             // Validate input
             $validatedData = $request->validate([
-                'front_photo' => 'nullable|string',
-                'back_photo' => 'nullable|string',
-                'criminal_record_photo' => 'nullable|string',
+                'front_photo' => 'nullable',
+                'back_photo' => 'nullable',
+                'criminal_record_photo' => 'nullable',
             ]);
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
@@ -39,7 +46,18 @@ class PaperController extends Controller
         // Add user_type and user_id to the validated data
         $validatedData['user_type'] = $userType;
         $validatedData['user_id'] = $userId;
-
+        if ($request->hasFile('front_photo')) {
+            $frontPhoto = $this->cloudImageService->upload($request->file('front_photo')->getRealPath());
+            $validatedData['front_photo'] = $frontPhoto['secure_url'];
+        }
+        if ($request->hasFile('back_photo')) {
+            $backPhoto = $this->cloudImageService->upload($request->file('back_photo')->getRealPath());
+            $validatedData['back_photo'] = $backPhoto['secure_url'];
+        }
+        if ($request->hasFile('criminal_record_photo')) {
+            $criminalRecordPhoto = $this->cloudImageService->upload($request->file('criminal_record_photo')->getRealPath());
+            $validatedData['criminal_record_photo'] = $criminalRecordPhoto['secure_url'];
+        }
         // Update or create paper record based on user_id and user_type
         $paper = Paper::updateOrCreate(
             [
