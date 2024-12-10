@@ -3,21 +3,30 @@
 namespace App\Http\Controllers;
 
 use App\Models\Service;
+use App\Services\CloudImageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class ServiceController extends Controller
 {
+    protected $cloudImageService;
+    public function __construct(CloudImageService $cloudImageService)
+    {
+        $this->cloudImageService = $cloudImageService;
+    }
     public function store(Request $request)
     {
+        Log::info('ServiceController@store', ['request' => $request->all()]);
         try {
             $validatedData = $request->validate([
                 'title' => 'required|string|max:255',
                 'sub_category_id' => 'required|exists:sub_categories,sub_category_id',
                 'description' => 'required|string',
                 'service_fee' => 'required|numeric|min:0',
-                'pictures' => 'nullable|array',
-                'add_ons' => 'nullable|array',
+                'pictures' => 'array|max:5',
+                'pictures.*' => 'image|mimes:jpeg,png,jpg|max:5120', // 5MB
+                 'add_ons' => 'nullable|array',
                 'sale_amount' => 'nullable|numeric|min:0',
                 'sale_percentage' => 'nullable|numeric|min:0|max:100',
                 'down_payment' => 'nullable|numeric|min:0',
@@ -31,6 +40,15 @@ class ServiceController extends Controller
             return response()->json(['errors' => $e->errors()], 422);
         }
         $validatedData['provider_id'] = auth()->user()->provider_id;
+        // Handle file uploads
+        $uploadedPictures = [];
+        if ($request->hasFile('pictures')) {
+            foreach ($request->file('pictures') as $picture) {
+                $uploadedPicture = $this->cloudImageService->upload($picture->path());
+                $uploadedPictures[] = $uploadedPicture['secure_url'];
+            }
+        }
+        $validatedData['pictures'] = $uploadedPictures;
         $service = Service::create($validatedData);
 
         return response()->json($service, 201);
@@ -175,5 +193,5 @@ class ServiceController extends Controller
         $services = $query->with(['SubCategory', 'Provider'])->get();
         return response()->json(['data' => $services, 'success' => true], 200, ['Content-Type' => 'application/vnd.api+json'],  JSON_UNESCAPED_SLASHES);
     }
-    
+
 }

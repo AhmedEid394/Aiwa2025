@@ -46,4 +46,16 @@ class CloudImageService
             throw $e;
         }
     }
+
+    public function multipleUpload(array $imagePaths, array $options = []): ApiResponse
+    {
+        try {
+            $uploadApi = new UploadApi();
+            return $uploadApi->upload($imagePaths, $options);
+        } catch (ApiError $e) {
+            // Log the error
+            Log::error('Failed to upload image to Cloudinary', ['error' => $e->getMessage()]);
+            throw $e;
+        }
+    }
 }

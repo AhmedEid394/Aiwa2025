@@ -8,31 +8,40 @@ use App\Models\ServiceProvider;
 use App\Models\ServiceRequest;
 use App\Models\User;
 use App\Models\Booking;
+use App\Services\CloudImageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class ServiceRequestController extends Controller
 {
+    protected $cloudImageService;
+    public function __construct(CloudImageService $cloudImageService)
+    {
+        $this->cloudImageService = $cloudImageService;
+    }
     public function store(Request $request)
     {
         try {
+            Log::info('Validating service request', ['request' => $request->all()]);
             $validatedData = $request->validate([
                 'sub_category_id' => 'required|exists:sub_categories,sub_category_id',
                 'title' => 'required|string|max:255',
                 'description' => 'required|string',
-                'date_of_done' => 'required|date',
                 'location' => 'required|string',
                 'building_number' => 'required|string',
                 'apartment' => 'required|string',
                 'location_mark' => 'required|string',
                 'expected_cost' => 'required|numeric|min:0',
-                'pictures' => 'nullable|array',
+                'pictures' => 'array|max:5',
+                'pictures.*' => 'image|mimes:jpeg,png,jpg|max:5120', // 5MB
                 'status' => 'required|string|in:request,accepted,rejected,done,accepted but not payed',
             ]);
         } catch (ValidationException $e) {
+            Log::error('Failed to validate service request', ['error' => $e->errors()]);
             return response()->json(['errors' => $e->errors()], 422);
         }
-
+        $validatedData['date_of_done'] = $request->input('formattedDate');
         $user = auth()->user();
         if ($user instanceof ServiceProvider) {
             $validatedData['user_type'] = 'Provider';
@@ -43,7 +52,14 @@ class ServiceRequestController extends Controller
         } else {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-
+        $uploadedPictures = [];
+        if ($request->hasFile('pictures')) {
+            foreach ($request->file('pictures') as $picture) {
+                $uploadedPicture = $this->cloudImageService->upload($picture->path());
+                $uploadedPictures[] = $uploadedPicture['secure_url'];
+            }
+        }
+        $validatedData['pictures'] = $uploadedPictures;
         $serviceRequest = ServiceRequest::create($validatedData);
 
         event(new ServiceRequested($serviceRequest));
