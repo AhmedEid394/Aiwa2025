@@ -71,7 +71,7 @@ class PaymentServicesController extends Controller
         $amountStr = number_format($totalAmount, 2, '.', '');
         $orderCurrency = 'EGP';
         $merchantReferenceId = "10";
-        $callbackUrl = config('app.payment_callback_url', "http://127.0.0.1:8000/api/payment/callback");
+        $callbackUrl = config('app.payment_callback_url', "https://apiaiwa.aiwagroup.org/api/payment/callback");
 
         return [
             'amount' => $amountStr,
@@ -81,8 +81,8 @@ class PaymentServicesController extends Controller
             'signature' => $this->generateSignature($amountStr, $orderCurrency, $merchantReferenceId, $timestamp),
             'paymentOperation' => 'Pay',
             'language' => 'en',
-            'callbackUrl' => 'https://apistage.aiwagroup.org/Paymentservices/GeideaPay',
-            'returnUrl' => "https://apistage.aiwagroup.org/Paymentservices/GeideaPay",
+            'callbackUrl' => 'https://apiaiwa.aiwagroup.org/api/payment/callback',
+            'returnUrl' => "https://apiaiwa.aiwagroup.org/api/payment/callback",
             'customer' => [
                 'email' => auth()->user()->email,
                 'phoneNumber' => auth()->user()->phone

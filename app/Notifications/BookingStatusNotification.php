@@ -86,8 +86,9 @@ class BookingStatusNotification extends Notification
         return [
             'booking_id' => $this->booking->booking_id,
             'status' => $this->booking->status,
-            'title' => 'Booking Status Updated',
+            'title' => 'Booking Status Updated to '.$this->booking->status,
             'message' => 'Your booking status has been updated to '.$this->booking->status,
+
         ];
     }
 

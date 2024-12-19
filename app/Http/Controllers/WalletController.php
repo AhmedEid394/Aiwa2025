@@ -22,11 +22,15 @@ class WalletController extends Controller
 
     public function update(Request $request)
     {
-        // Get the authenticated provider's ID
-        $providerId = auth()->user()->provider_id;
+        // Validate the request data
+        $validated = $request->validate([
+            'total_amount' => 'nullable|numeric|min:0',
+            'available_amount' => 'nullable|numeric',
+            'provider_id' => 'required'
+        ]);
 
         // Find the wallet associated with this provider
-        $wallet = Wallet::where('provider_id', $providerId)->first();
+        $wallet = Wallet::where('provider_id', $validated['provider_id'])->first();
 
         // Check if the wallet exists
         if (!$wallet) {
@@ -35,14 +39,21 @@ class WalletController extends Controller
             ], 404);
         }
 
-        // Validate the request data
-        $validated = $request->validate([
-            'total_amount' => 'required|numeric|min:0',
-            'available_amount' => 'required|numeric|min:0|max:' . $request->total_amount,
-        ]);
+        // Prepare update data
+        $updateData = [];
+
+        // Handle total_amount (if provided)
+        if (isset($validated['total_amount'])) {
+            $updateData['total_amount'] = $wallet->total_amount + $validated['total_amount'];
+        }
+
+        // Handle available_amount (increment/decrement)
+        if (isset($validated['available_amount'])) {
+            $updateData['available_amount'] = $wallet->available_amount + $validated['available_amount'];
+        }
 
         // Update the wallet
-        $wallet->update($validated);
+        $wallet->update($updateData);
 
         return response()->json([
             'message' => 'Wallet updated successfully',

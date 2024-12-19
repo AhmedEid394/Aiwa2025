@@ -40,7 +40,8 @@ use App\Http\Controllers\PaperController;
 
 // routes/api.php
 Route::middleware('auth:sanctum')->post('/update-fcm-token', [FcmTokenController::class, 'update']);
-
+//callback gedia
+Route::get('/payment/callback', [PaymentServicesController::class, 'paymentCallback']);
 // User routes
 Route::post('/users/register', [UserController::class, 'register']);
 Route::post('/users/login', [UserController::class, 'login']);
@@ -165,7 +166,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Geidea payment
     Route::post('/payment/create-session', [PaymentServicesController::class, 'createSession']);
-    Route::post('/payment/callback', [PaymentServicesController::class, 'paymentCallback']);
 
     Route::get('/topOffers', [Controller::class, 'getTopSuggestedServices']);
 

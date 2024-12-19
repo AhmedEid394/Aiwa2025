@@ -52,7 +52,7 @@ class ServiceProvider extends Model
     public function promoCodes(){
         return $this->hasMany(PromoCode::class, 'provider_id');
     }
-    
+
     public function papers()
     {
         return $this->hasMany(Paper::class, 'provider_id');

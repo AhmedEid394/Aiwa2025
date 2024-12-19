@@ -17,7 +17,6 @@ class ServiceController extends Controller
     }
     public function store(Request $request)
     {
-        Log::info('ServiceController@store', ['request' => $request->all()]);
         try {
             $validatedData = $request->validate([
                 'title' => 'required|string|max:255',

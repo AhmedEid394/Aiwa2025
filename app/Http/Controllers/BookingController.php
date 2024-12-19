@@ -113,7 +113,7 @@ class BookingController extends Controller
         if ($booking->status === 'done') {
             // Generate a random transaction reference
             $transactionRef = 'TR-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 10));
-            
+
             // Create transaction record
             $transactionController = new TransactionController();
             $transactionRequest = new Request([
@@ -125,6 +125,18 @@ class BookingController extends Controller
                 'transaction_reference' => $transactionRef
             ]);
             $transactionController->store($transactionRequest);
+
+            // Get provider_id from service
+            $providerId = $booking->service->provider_id;
+
+            // Decrement available amount and increment total amount
+            $walletController = new WalletController();
+            $walletRequest = new Request([
+                'total_amount' => $booking->total_price,
+                'available_amount' => -$booking->total_price,
+                'provider_id' => $providerId
+            ]);
+            $walletController->update($walletRequest);
         }
 
         // If status is updated to 'accepted'
@@ -132,11 +144,14 @@ class BookingController extends Controller
             // Calculate provider's earnings (86% of total price)
             $providerEarnings = $booking->total_price * 0.86;
 
-            // Update provider's wallet
+            // Get provider_id from service
+            $providerId = $booking->service->provider_id;
+
+            // Increment available amount
             $walletController = new WalletController();
             $walletRequest = new Request([
-                'total_amount' => $providerEarnings,
-                'available_amount' => $providerEarnings
+                'available_amount' => $providerEarnings,
+                'provider_id' => $providerId
             ]);
             $walletController->update($walletRequest);
 
@@ -144,11 +159,12 @@ class BookingController extends Controller
             $chatController = new ChatController();
             $chatRequest = new Request([
                 'user_id' => $booking->user_id,
-                'provider_id' => $booking->service->provider_id
+                'provider_id' => $providerId
             ]);
             $chatController->startChat($chatRequest);
         }
     }
+
 
     return response()->json($booking, 200);
 }
@@ -186,7 +202,7 @@ class BookingController extends Controller
 
     public function getProviderWorkOrders()
     {
-        
+
         $provider = auth()->user();
 
         if (!($provider instanceof ServiceProvider)) {
