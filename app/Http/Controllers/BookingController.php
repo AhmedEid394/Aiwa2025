@@ -183,7 +183,9 @@ class BookingController extends Controller
         $user = auth()->user();
 
         // Initialize the query with service relation
-        $query = Booking::with(['service', 'service.provider']);
+        $query = Booking::with(['service' => function($query) {
+            $query->with('Provider'); // Assuming there's a provider relationship in Service model
+        }]);
 
         // Check user type and filter accordingly
         if ($user instanceof User) {

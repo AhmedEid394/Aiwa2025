@@ -58,10 +58,40 @@ class Controller extends BaseController
         ], 401);
     }
 
-    public function getTopSuggestedServices()
+    public function getTopSuggestedServices(Request $request)
     {
+        // Get location parameters from request
+        $userLat = $request->input('latitude');
+        $userLng = $request->input('longitude');
+        $maxDistance = $request->input('distance'); // Default to 50km if not provided
+
         // Base query with relationships
         $query = Service::with(['SubCategory', 'Provider']);
+
+        // Add distance calculation using Haversine formula if coordinates are provided
+        if ($userLat && $userLng) {
+            $query->selectRaw("
+            *,
+            (
+                6371 * acos(
+                    cos(radians(?)) *
+                    cos(radians(latitude)) *
+                    cos(radians(longitude) - radians(?)) +
+                    sin(radians(?)) *
+                    sin(radians(latitude))
+                )
+            ) AS distance", [$userLat, $userLng, $userLat]
+            )
+                ->whereRaw("
+            6371 * acos(
+                cos(radians(?)) *
+                cos(radians(latitude)) *
+                cos(radians(longitude) - radians(?)) +
+                sin(radians(?)) *
+                sin(radians(latitude))
+            ) <= ?", [$userLat, $userLng, $userLat, $maxDistance]
+                );
+        }
 
         // Analyze booking frequency for each service
         $topServicesByBookings = Booking::select('service_id')
@@ -84,6 +114,9 @@ class Controller extends BaseController
 
         // Filter and order the services
         $suggestedServices = $query->whereIn('service_id', $suggestedServiceIds)
+            ->when($userLat && $userLng, function ($query) {
+                return $query->orderBy('distance', 'asc'); // Sort by distance if coordinates provided
+            })
             ->orderByRaw('FIELD(service_id, ' . $suggestedServiceIds->implode(',') . ')')
             ->get();
 
@@ -105,6 +138,7 @@ class Controller extends BaseController
                     'building' => $service->building,
                     'apartment' => $service->apartment,
                     'location_mark' => $service->location_mark,
+                    'distance' => round($service->distance, 2) ?? null, // Add calculated distance to response
                     'sub_category' => [
                         'sub_category_id' => $service->SubCategory->sub_category_id ?? null,
                         'name' => $service->SubCategory->name ?? null,
@@ -114,6 +148,11 @@ class Controller extends BaseController
             }),
         ];
 
-        return response()->json(['data' => $response,'success' => true],200, ['Content-Type' => 'application/vnd.api+json'],  JSON_UNESCAPED_SLASHES);
+        return response()->json(
+            ['data' => $response, 'success' => true],
+            200,
+            ['Content-Type' => 'application/vnd.api+json'],
+            JSON_UNESCAPED_SLASHES
+        );
     }
 }

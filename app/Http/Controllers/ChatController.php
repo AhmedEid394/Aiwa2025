@@ -20,7 +20,7 @@ class ChatController extends Controller
     public function index()
     {
         $user = auth()->user();
-        
+
         $providerId=null;
 
         $userId=null;
@@ -74,41 +74,41 @@ class ChatController extends Controller
 
         // Get all chats for the provider with their latest messages
         $chats = Chat::where('provider_id', $providerId)
-        ->with(['user']) // Eager load user details
-        ->withCount('messages') // Get message count for each chat
-        ->addSelect([
-            'latest_message_id' => Message::select('message_id')
-                ->whereColumn('chat_id', 'chats.chat_id')
-                ->latest()
-                ->take(1),
-            'latest_message_text' => Message::select('message')
-                ->whereColumn('chat_id', 'chats.chat_id')
-                ->latest()
-                ->take(1),
-            'latest_message_created_at' => Message::select('created_at')
-                ->whereColumn('chat_id', 'chats.chat_id')
-                ->latest()
-                ->take(1),
-            'latest_message_sender_type' => Message::select('sender_type')
-                ->whereColumn('chat_id', 'chats.chat_id')
-                ->latest()
-                ->take(1),
-            'latest_message_sender_id' => Message::select('sender_id')
-                ->whereColumn('chat_id', 'chats.chat_id')
-                ->latest()
-                ->take(1),
-            'latest_message_read_at' => Message::select('read_at')
-                ->whereColumn('chat_id', 'chats.chat_id')
-                ->latest()
-                ->take(1),
-        ])
-        ->orderByDesc(
-            Message::select('created_at')
-                ->whereColumn('chat_id', 'chats.chat_id')
-                ->latest()
-                ->take(1)
-        )
-        ->get();
+            ->with(['user']) // Eager load user details
+            ->withCount('messages') // Get message count for each chat
+            ->addSelect([
+                'latest_message_id' => Message::select('message_id')
+                    ->whereColumn('chat_id', 'chats.chat_id')
+                    ->latest()
+                    ->take(1),
+                'latest_message_text' => Message::select('message')
+                    ->whereColumn('chat_id', 'chats.chat_id')
+                    ->latest()
+                    ->take(1),
+                'latest_message_created_at' => Message::select('created_at')
+                    ->whereColumn('chat_id', 'chats.chat_id')
+                    ->latest()
+                    ->take(1),
+                'latest_message_sender_type' => Message::select('sender_type')
+                    ->whereColumn('chat_id', 'chats.chat_id')
+                    ->latest()
+                    ->take(1),
+                'latest_message_sender_id' => Message::select('sender_id')
+                    ->whereColumn('chat_id', 'chats.chat_id')
+                    ->latest()
+                    ->take(1),
+                'latest_message_read_at' => Message::select('read_at')
+                    ->whereColumn('chat_id', 'chats.chat_id')
+                    ->latest()
+                    ->take(1),
+            ])
+            ->orderByDesc(
+                Message::select('created_at')
+                    ->whereColumn('chat_id', 'chats.chat_id')
+                    ->latest()
+                    ->take(1)
+            )
+            ->get();
 
         return response()->json([
             'success' => true,
@@ -182,7 +182,7 @@ class ChatController extends Controller
         ]);
 
         ($request->user_id)?($chat = Chat::where('provider_id', auth()->user()->provider_id)->where('user_id', $request->user_id)->first())
-        :($chat = Chat::where('user_id', auth()->user()->user_id)->where('provider_id', $request->provider_id)->first());
+            :($chat = Chat::where('user_id', auth()->user()->user_id)->where('provider_id', $request->provider_id)->first());
 
         return response()->json(['exists' => $chat ? true : false], 200);
     }

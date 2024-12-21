@@ -110,9 +110,40 @@ class ServiceController extends Controller
     {
         $query = Service::with(['SubCategory', 'Provider']);
 
-        // Apply filters if provided
+        // Get location parameters from request
+        $userLat = $request->input('latitude');
+        $userLng = $request->input('longitude');
+        $maxDistance = $request->input('distance'); // Default to 50km if not provided
+
+        // Apply sub_category filter
         if ($request->has('sub_category_id')) {
             $query->where('sub_category_id', $request->sub_category_id);
+
+            // Add distance calculation using Haversine formula if coordinates are provided
+            if ($userLat && $userLng) {
+                $query->selectRaw("
+                *,
+                (
+                    6371 * acos(
+                        cos(radians(?)) *
+                        cos(radians(latitude)) *
+                        cos(radians(longitude) - radians(?)) +
+                        sin(radians(?)) *
+                        sin(radians(latitude))
+                    )
+                ) AS distance", [$userLat, $userLng, $userLat]
+                )
+                    ->whereRaw("
+                6371 * acos(
+                    cos(radians(?)) *
+                    cos(radians(latitude)) *
+                    cos(radians(longitude) - radians(?)) +
+                    sin(radians(?)) *
+                    sin(radians(latitude))
+                ) <= ?", [$userLat, $userLng, $userLat, $maxDistance]
+                    )
+                    ->orderBy('distance', 'asc');
+            }
         }
 
         if ($request->has('provider_id')) {
