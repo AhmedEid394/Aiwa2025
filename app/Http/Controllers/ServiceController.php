@@ -11,10 +11,12 @@ use Illuminate\Validation\ValidationException;
 class ServiceController extends Controller
 {
     protected $cloudImageService;
+
     public function __construct(CloudImageService $cloudImageService)
     {
         $this->cloudImageService = $cloudImageService;
     }
+
     public function store(Request $request)
     {
         try {
@@ -24,8 +26,8 @@ class ServiceController extends Controller
                 'description' => 'required|string',
                 'service_fee' => 'required|numeric|min:0',
                 'pictures' => 'array|max:5',
-                'pictures.*' => 'image|mimes:jpeg,png,jpg|max:5120', // 5MB
-                 'add_ons' => 'nullable|array',
+                'pictures.*' => 'string',
+                'add_ons' => 'nullable|array',
                 'sale_amount' => 'nullable|numeric|min:0',
                 'sale_percentage' => 'nullable|numeric|min:0|max:100',
                 'down_payment' => 'nullable|numeric|min:0',
@@ -38,19 +40,63 @@ class ServiceController extends Controller
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         }
-        $validatedData['provider_id'] = auth()->user()->provider_id;
-        // Handle file uploads
-        $uploadedPictures = [];
-        if ($request->hasFile('pictures')) {
-            foreach ($request->file('pictures') as $picture) {
-                $uploadedPicture = $this->cloudImageService->upload($picture->path());
-                $uploadedPictures[] = $uploadedPicture['secure_url'];
-            }
-        }
-        $validatedData['pictures'] = $uploadedPictures;
-        $service = Service::create($validatedData);
 
-        return response()->json($service, 201);
+        try {
+            // Handle image uploads
+            $uploadedPictures = [];
+            if (!empty($validatedData['pictures'])) {
+                foreach ($validatedData['pictures'] as $base64Image) {
+                    // Skip if already a URL
+                    if (filter_var($base64Image, FILTER_VALIDATE_URL)) {
+                        $uploadedPictures[] = $base64Image;
+                        continue;
+                    }
+
+                    // Process base64 image
+                    try {
+                        // Remove data URI scheme if present
+                        if (strpos($base64Image, 'data:image') !== false) {
+                            $base64Image = preg_replace('/^data:image\/\w+;base64,/', '', $base64Image);
+                        }
+
+                        // Decode base64
+                        $imageData = base64_decode($base64Image);
+                        if (!$imageData) {
+                            Log::error('Failed to decode base64 image');
+                            continue;
+                        }
+
+                        // Create temporary file
+                        $tempFile = tempnam(sys_get_temp_dir(), 'service_img_');
+                        file_put_contents($tempFile, $imageData);
+
+                        // Upload to cloud storage
+                        $result = $this->cloudImageService->upload($tempFile);
+                        if (isset($result['secure_url'])) {
+                            $uploadedPictures[] = $result['secure_url'];
+                        }
+
+                        // Clean up temporary file
+                        unlink($tempFile);
+                    } catch (\Exception $e) {
+                        Log::error('Image processing error: ' . $e->getMessage());
+                        continue;
+                    }
+                }
+            }
+
+            // Update pictures in validated data
+            $validatedData['pictures'] = $uploadedPictures;
+            $validatedData['provider_id'] = auth()->user()->provider_id;
+
+            // Create service
+            $service = Service::create($validatedData);
+            return response()->json($service, 201);
+
+        } catch (\Exception $e) {
+            Log::error('Service creation error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to create service'], 500);
+        }
     }
 
     public function show($id)
@@ -190,7 +236,6 @@ class ServiceController extends Controller
 
         return response()->json($response, 200, [], JSON_UNESCAPED_SLASHES);
     }
-
 
     public function search(Request $request)
     {

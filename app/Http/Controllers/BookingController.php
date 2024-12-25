@@ -159,6 +159,7 @@ class BookingController extends Controller
             $chatController = new ChatController();
             $chatRequest = new Request([
                 'user_id' => $booking->user_id,
+                'user_type' => $booking->user_type,
                 'provider_id' => $providerId
             ]);
             $chatController->startChat($chatRequest);

@@ -7,8 +7,11 @@ use App\Services\CloudImageService;
 use Illuminate\Http\Request;
 use App\Models\ServiceProvider;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-
 
 class PaperController extends Controller
 {
@@ -18,61 +21,99 @@ class PaperController extends Controller
     {
         $this->cloudImageService = $cloudImageService;
     }
+
     public function uploadPapers(Request $request)
     {
         try {
-            // Validate input
             $validatedData = $request->validate([
-                'front_photo' => 'nullable',
-                'back_photo' => 'nullable',
-                'criminal_record_photo' => 'nullable',
+                'front_photo' => 'nullable|string',
+                'back_photo' => 'nullable|string',
+                'criminal_record_photo' => 'nullable|string',
             ]);
-        } catch (ValidationException $e) {
-            return response()->json(['errors' => $e->errors()], 422);
-        }
 
-        $user = auth()->user();
+            $user = auth()->user();
 
-        if ($user instanceof ServiceProvider) {
-            $userType = 'Provider';
-            $userId = $user->provider_id;
-        } elseif ($user instanceof User) {
-            $userType = 'user';
-            $userId = $user->user_id;
-        } else {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
+            if ($user instanceof ServiceProvider) {
+                $userType = 'Provider';
+                $userId = $user->provider_id;
+            } elseif ($user instanceof User) {
+                $userType = 'user';
+                $userId = $user->user_id;
+            } else {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
 
-        // Add user_type and user_id to the validated data
-        $validatedData['user_type'] = $userType;
-        $validatedData['user_id'] = $userId;
-        if ($request->hasFile('front_photo')) {
-            $frontPhoto = $this->cloudImageService->upload($request->file('front_photo')->getRealPath());
-            $validatedData['front_photo'] = $frontPhoto['secure_url'];
-        }
-        if ($request->hasFile('back_photo')) {
-            $backPhoto = $this->cloudImageService->upload($request->file('back_photo')->getRealPath());
-            $validatedData['back_photo'] = $backPhoto['secure_url'];
-        }
-        if ($request->hasFile('criminal_record_photo')) {
-            $criminalRecordPhoto = $this->cloudImageService->upload($request->file('criminal_record_photo')->getRealPath());
-            $validatedData['criminal_record_photo'] = $criminalRecordPhoto['secure_url'];
-        }
-        // Update or create paper record based on user_id and user_type
-        $paper = Paper::updateOrCreate(
-            [
-                'user_id' => $userId,
-                'user_type' => $userType,
-            ],
-            $validatedData // Update with the validated data
-        );
+            $uploadedUrls = [];
+            $photoTypes = ['front_photo', 'back_photo', 'criminal_record_photo'];
+            $tempFiles = [];
 
-        return response()->json([
-            'data' => $paper,
-            'success' => true,
-        ], 200, ['Content-Type' => 'application/vnd.api+json'], JSON_UNESCAPED_SLASHES);
+            // Use a single temporary directory for all images to improve cleanup management
+            $tempDir = sys_get_temp_dir() . '/' . Str::uuid();
+            mkdir($tempDir);
+
+            try {
+                foreach ($photoTypes as $photoType) {
+                    if (!empty($validatedData[$photoType])) {
+                        $decodedData = base64_decode($validatedData[$photoType], true);
+                        if ($decodedData === false) {
+                            throw new ValidationException("Invalid base64 data for $photoType");
+                        }
+
+                        // Save base64 image temporarily with faster write operation
+                        $tempPath = $tempDir . '/' . $photoType . '.jpg';
+                        file_put_contents($tempPath, $decodedData);
+                        $tempFiles[] = $tempPath;
+
+                        // Upload to cloud
+                        $uploadResult = $this->cloudImageService->upload($tempPath);
+                        if (!isset($uploadResult['secure_url'])) {
+                            throw new \Exception("Upload failed for $photoType");
+                        }
+
+                        $uploadedUrls[$photoType] = $uploadResult['secure_url'];
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('Error during file upload: ' . $e->getMessage());
+                // Clean up on error
+                foreach ($tempFiles as $tempFile) {
+                    @unlink($tempFile);
+                }
+                @rmdir($tempDir);
+                throw $e;
+            }
+
+            // Clean up temp files and directory
+            foreach ($tempFiles as $tempFile) {
+                @unlink($tempFile);
+            }
+            @rmdir($tempDir);
+
+            // Save to database
+            $paper = Paper::updateOrCreate(
+                [
+                    'user_id' => $userId,
+                    'user_type' => $userType,
+                ],
+                array_merge($uploadedUrls, [
+                    'user_type' => $userType,
+                    'user_id' => $userId,
+                ])
+            );
+
+            return response()->json([
+                'data' => $paper,
+                'success' => true
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Upload failed: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Upload failed: ' . $e->getMessage(),
+                'success' => false
+            ], 500);
+        }
     }
-
 
     public function getPapers()
     {
@@ -124,4 +165,5 @@ class PaperController extends Controller
 
         return response()->json(['error' => 'Unauthorized'], 401);
     }
+
 }

@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
         Schema::create('chats', function (Blueprint $table) {
             $table->id('chat_id');
             $table->unsignedBigInteger('user_id');
-            $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
+            $table->enum('user_type', ['user', 'Provider']); // User or service provider
             $table->unsignedBigInteger('provider_id');
             $table->foreign('provider_id')->references('provider_id')->on('service_providers')->onDelete('cascade');
             $table->timestamps();

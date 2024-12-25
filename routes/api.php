@@ -50,6 +50,9 @@ Route::post('/login', [Controller::class, 'login']);
 
 Route::get('/categories/{id}', [CategoryController::class, 'show']);
 Route::get('/subcategories', [SubCategoryController::class, 'index']);
+Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/topOffers', [Controller::class, 'getTopSuggestedServices']);
+
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/logout', [UserController::class, 'logout']);
@@ -62,7 +65,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::put('/categories/{id}', [CategoryController::class, 'update']);
     Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
-    Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/subCategories', [CategoryController::class, 'subCategory']);
 
     // SubCategory routes
@@ -111,6 +113,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/chat/message', [ChatController::class, 'sendMessage']);
     Route::get('/chat/messages', [ChatController::class, 'getMessages']);
     Route::delete('/chat/{messageId}', [ChatController::class, 'deleteMessage']);
+    Route::post('/chat/mark-read', [ChatController::class, 'markMessagesAsRead']);
 
     // PermissionType routes
     Route::post('/permission-types', [PermissionTypeController::class, 'store']);
@@ -166,8 +169,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Geidea payment
     Route::post('/payment/create-session', [PaymentServicesController::class, 'createSession']);
-
-    Route::get('/topOffers', [Controller::class, 'getTopSuggestedServices']);
 
     Route::group(['prefix' => 'addresses'], function () {
         Route::get('/', [\App\Http\Controllers\AddressesController::class, 'index']);

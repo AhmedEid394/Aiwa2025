@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\Storage;
 
 class ChatController extends Controller
 {
-
     public function index()
     {
         $user = auth()->user();
@@ -34,8 +33,9 @@ class ChatController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
+        if($userId){
         // Get all chats for the user with their latest messages
-        $chats = Chat::where('user_id', $userId)
+        $chats = Chat::where('user_id', $userId)->where('user_type', 'user')
             ->with(['Provider']) // Eager load service provider details
             ->withCount('messages') // Get message count for each chat
             ->addSelect([
@@ -71,48 +71,57 @@ class ChatController extends Controller
                     ->take(1)
             )
             ->get();
+        }
 
-        // Get all chats for the provider with their latest messages
-        $chats = Chat::where('provider_id', $providerId)
-            ->with(['user']) // Eager load user details
-            ->withCount('messages') // Get message count for each chat
-            ->addSelect([
-                'latest_message_id' => Message::select('message_id')
-                    ->whereColumn('chat_id', 'chats.chat_id')
-                    ->latest()
-                    ->take(1),
-                'latest_message_text' => Message::select('message')
-                    ->whereColumn('chat_id', 'chats.chat_id')
-                    ->latest()
-                    ->take(1),
-                'latest_message_created_at' => Message::select('created_at')
-                    ->whereColumn('chat_id', 'chats.chat_id')
-                    ->latest()
-                    ->take(1),
-                'latest_message_sender_type' => Message::select('sender_type')
-                    ->whereColumn('chat_id', 'chats.chat_id')
-                    ->latest()
-                    ->take(1),
-                'latest_message_sender_id' => Message::select('sender_id')
-                    ->whereColumn('chat_id', 'chats.chat_id')
-                    ->latest()
-                    ->take(1),
-                'latest_message_read_at' => Message::select('read_at')
-                    ->whereColumn('chat_id', 'chats.chat_id')
-                    ->latest()
-                    ->take(1),
-            ])
-            ->orderByDesc(
-                Message::select('created_at')
-                    ->whereColumn('chat_id', 'chats.chat_id')
-                    ->latest()
-                    ->take(1)
-            )
-            ->get();
+        else {
+            // Get all chats for the provider with their latest messages (merged conditions)
+            $chats = Chat::where(function ($query) use ($providerId) {
+                $query->where('provider_id', $providerId)
+                    ->orWhere(function ($subQuery) use ($providerId) {
+                        $subQuery->where('user_id', $providerId)
+                            ->where('user_type', 'Provider');
+                    });
+            })
+                ->with(['user', 'Provider']) // Eager load both user and provider details
+                ->withCount('messages') // Get message count for each chat
+                ->addSelect([
+                    'latest_message_id' => Message::select('message_id')
+                        ->whereColumn('chat_id', 'chats.chat_id')
+                        ->latest()
+                        ->take(1),
+                    'latest_message_text' => Message::select('message')
+                        ->whereColumn('chat_id', 'chats.chat_id')
+                        ->latest()
+                        ->take(1),
+                    'latest_message_created_at' => Message::select('created_at')
+                        ->whereColumn('chat_id', 'chats.chat_id')
+                        ->latest()
+                        ->take(1),
+                    'latest_message_sender_type' => Message::select('sender_type')
+                        ->whereColumn('chat_id', 'chats.chat_id')
+                        ->latest()
+                        ->take(1),
+                    'latest_message_sender_id' => Message::select('sender_id')
+                        ->whereColumn('chat_id', 'chats.chat_id')
+                        ->latest()
+                        ->take(1),
+                    'latest_message_read_at' => Message::select('read_at')
+                        ->whereColumn('chat_id', 'chats.chat_id')
+                        ->latest()
+                        ->take(1),
+                ])
+                ->orderByDesc(
+                    Message::select('created_at')
+                        ->whereColumn('chat_id', 'chats.chat_id')
+                        ->latest()
+                        ->take(1)
+                )
+                ->get();
+        }
 
         return response()->json([
             'success' => true,
-            'data' =>(!$providerId)?( $chats->map(function ($chat) {
+            'data' =>(!$providerId)?($chats->map(function ($chat) use ($userId) {
                 return [
                     'chat_id' => $chat->chat_id,
                     'provider_id' => $chat->provider_id,
@@ -120,6 +129,7 @@ class ChatController extends Controller
                     'provider_picture' =>  $chat->provider->profile_photo ?? null,
                     'messages_count' => $chat->messages_count,
                     'provider' => $chat->provider,
+                    'user_id' => $userId,
                     'latest_message' => $chat->latest_message_id ? [
                         'message_id' => $chat->latest_message_id,
                         'message' => $chat->latest_message_text,
@@ -131,15 +141,16 @@ class ChatController extends Controller
                     'created_at' => $chat->created_at,
                     'updated_at' => $chat->updated_at,
                 ];
-            })):($chats->map(function ($chat) {
+            })):($chats->map(function ($chat) use ($user, $providerId) {
                 return [
                     'chat_id' => $chat->chat_id,
-                    'user_id' => $chat->user->user_id,
-                    'user_name' =>  $chat->user->f_name . ' ' . $chat->user->l_name ?? null,
-                    'user_picture' =>  $chat->user->profile_photo ?? null,
+                    'user_id' => $chat->user ? $chat->user->user_id : $chat->provider->user_id,
+                    'user_name' => $chat->user ? $chat->user->f_name . ' ' . $chat->user->l_name : $chat->provider->f_name . ' ' . $chat->provider->l_name,
+                    'user_picture' =>  $chat->user ? $chat->user->profile_photo : $chat->provider->profile_photo,
                     'messages_count' => $chat->messages_count,
-                    'user' => $chat->user,
-                    'provider' => $chat->provider,
+                    'user' => $chat->user?:$chat->provider,
+                    'provider' => $user,
+                    'user_type' => $chat->user ? 'user' : 'Provider',
                     'latest_message' => $chat->latest_message_id ? [
                         'message_id' => $chat->latest_message_id,
                         'message' => $chat->latest_message_text,
@@ -159,7 +170,8 @@ class ChatController extends Controller
     {
         try {
             $request->validate([
-                'user_id' => 'required|exists:users,user_id',
+                'user_id' => 'required',
+                'user_type' => 'required',
                 'provider_id' => 'required|exists:service_providers,provider_id',
             ]);
         } catch (ValidationException $e) {
@@ -169,22 +181,23 @@ class ChatController extends Controller
 
         $chat = Chat::firstOrCreate([
             'user_id' => $request->user_id,
+            'user_type' => $request->user_type,
             'provider_id' => $request->provider_id,
         ]);
 
-        return response()->json($chat, 201);
+        return response()->json($chat, 200);
     }
 
     public function checkChatExists(Request $request)
     {
         $request->validate([
-            'provider_id' => 'required|exists:service_providers,provider_id',
+            'user_id' => 'required',
+            'provider_id' => 'required',
         ]);
 
-        ($request->user_id)?($chat = Chat::where('provider_id', auth()->user()->provider_id)->where('user_id', $request->user_id)->first())
-            :($chat = Chat::where('user_id', auth()->user()->user_id)->where('provider_id', $request->provider_id)->first());
+       $chat = Chat::where('provider_id', $request->provider_id)->where('user_id', $request->user_id)->first();
 
-        return response()->json(['exists' => $chat ? true : false], 200);
+        return response()->json(['data' => (bool)$chat,  'success' => true], 200, [], JSON_UNESCAPED_SLASHES);
     }
 
     public function sendMessage(Request $request)
@@ -210,16 +223,18 @@ class ChatController extends Controller
         // Get the authenticated user
         $user = auth()->user();
 
-        // Determine sender type based on user instance
-        if ($user instanceof ServiceProvider) {
-            $senderType = 'provider';
-            $senderId = $user->provider_id; // Use `provider_id` for providers
-        } elseif ($user instanceof User) {
+        // Fetch the chat entry
+        $chat = Chat::find($request->chatId)->first();
+
+        // Determine sender type and ID based on chat table entries
+        if ($chat->user_id === $user->user_id || $chat->user_id === $user->provider_id) {
             $senderType = 'user';
-            $senderId = $user->user_id; // Use `user_id` for users
+            $senderId = $user->user_id ?? $user->provider_id; // Use the user's ID
         } else {
-            return response()->json(['error' => 'Unauthorized'], 401);
+            $senderType = 'Provider';
+            $senderId = $user->provider_id ?? $user->user_id; // Use provider_id if available, fallback to user ID
         }
+
 
         // Create the message
         $message = Message::create([
@@ -238,8 +253,7 @@ class ChatController extends Controller
             'file' => $fileEncoded, // Return the encoded file (if uploaded)
         ], 201);
     }
-
-
+    
     public function getMessages(Request $request)
     {
         $chat = Chat::find($request->chatId);
@@ -285,4 +299,41 @@ class ChatController extends Controller
 
         return response()->json(['message' => 'Message deleted successfully'], 200);
     }
+
+    public function markMessagesAsRead(Request $request)
+    {
+        try {
+            // Validate the chat_id
+            $request->validate([
+                'chat_id' => 'required|exists:chats,chat_id'
+            ]);
+
+            $user = auth()->user();
+            $currentUserId = $user instanceof ServiceProvider ? $user->provider_id : $user->user_id;
+
+            // Get all unread messages in this chat that were not sent by the current user
+            $messages = Message::where('chat_id', $request->chat_id)
+                ->whereNull('read_at')
+                ->where(function ($query) use ($currentUserId) {
+                    $query->where('sender_id', '!=', $currentUserId);
+                })
+                ->update(['read_at' => now()]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Messages marked as read successfully',
+                'updated_count' => $messages
+            ],200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to mark messages as read',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+
 }
