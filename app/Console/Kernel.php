@@ -14,13 +14,34 @@ class Kernel extends ConsoleKernel
     {
         $schedule->call(function () {
             try {
+                // Write to both Laravel's default log and scheduler log
+                $message = 'Starting transaction status check at: ' . now();
+                Log::info($message);
+                file_put_contents(
+                    storage_path('logs/scheduler.log'),
+                    "[" . now() . "] " . $message . PHP_EOL,
+                    FILE_APPEND
+                );
+
                 app(BmCashoutStatusController::class)->checkTransactionStatuses();
+
+                $message = 'Transaction status check completed at: ' . now();
+                Log::info($message);
+                file_put_contents(
+                    storage_path('logs/scheduler.log'),
+                    "[" . now() . "] " . $message . PHP_EOL,
+                    FILE_APPEND
+                );
             } catch (\Exception $e) {
-                Log::error('Transaction status check failed: ' . $e->getMessage());
+                $error = 'Transaction status check failed: ' . $e->getMessage();
+                Log::error($error);
+                file_put_contents(
+                    storage_path('logs/scheduler.log'),
+                    "[" . now() . "] ERROR: " . $error . PHP_EOL,
+                    FILE_APPEND
+                );
             }
-        })->everyThirtyMinutes()
-            ->withoutOverlapping()  // Prevent overlapping
-            ->runInBackground();    // Run in background
+        })->everyThirtyMinutes();    // Run in background
     }
 
     /**
