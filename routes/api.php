@@ -60,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/profile', [UserController::class, 'update']);
     Route::delete('/users/profile', [UserController::class, 'destroy']);
 
+    Route::get('/getDistance', [Controller::class, 'getDistance']);
 
     // Category routes
     Route::post('/categories', [CategoryController::class, 'store']);
@@ -85,6 +86,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/service-requests/{id}/status', [ServiceRequestController::class, 'updateStatus']);
     Route::get('/provider/accepted-requests', [ServiceRequestController::class, 'getProviderAcceptedRequests']);
     Route::get('/auth-user/requests', [ServiceRequestController::class, 'getAuthUserRequests']);
+
     // Service routes
     Route::post('/services', [ServiceController::class, 'store']);
     Route::get('/services/{id}', [ServiceController::class, 'show']);
@@ -101,6 +103,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/bookings/{id}', [BookingController::class, 'destroy']);
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::get('/provider/work-orders', [BookingController::class, 'getProviderWorkOrders']);
+
     // Favourite routes
     Route::get('/favourites', [FavouriteController::class, 'index']);
     Route::get('/favourites/{id}', [FavouriteController::class, 'show']);

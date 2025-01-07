@@ -155,4 +155,14 @@ class Controller extends BaseController
             JSON_UNESCAPED_SLASHES
         );
     }
+
+    public function getDistance()
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+        $maxDistance=$user->maxDistance;
+        return response()->json(['data' => $maxDistance,'success' => true], 200, ['Content-Type' => 'application/vnd.api+json'],  JSON_UNESCAPED_SLASHES);
+    }
 }

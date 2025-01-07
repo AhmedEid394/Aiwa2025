@@ -34,15 +34,19 @@ class ServiceRequest extends Model
     public function user()
     {
         if ($this->user_type === 'user') {
-            return User::where('user_id', $this->user_id)->first();
+            return $this->belongsTo(User::class, 'user_id', 'user_id');
         }
-        else {
-            return ServiceProvider::where('provider_id', $this->user_id)->first();
-        }
+        return $this->belongsTo(ServiceProvider::class, 'user_id', 'provider_id');
     }
 
     public function subCategory()
     {
         return $this->belongsTo(SubCategory::class, 'sub_category_id', 'sub_category_id');
     }
+
+    public function Provider()
+    {
+        return $this->belongsTo(ServiceProvider::class, 'provider_id');
+    }
+
 }

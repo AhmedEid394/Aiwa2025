@@ -9,7 +9,7 @@ use App\Models\Wallet;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
-use Illuminate\Support\Facades\Log; // Add the Log facade
+use Illuminate\Support\Facades\Log;
 
 class ServiceProviderController extends Controller
 {
@@ -34,6 +34,7 @@ class ServiceProviderController extends Controller
                 'gender' => 'required|in:male,female',
                 'profile_photo' => 'nullable|file|image|max:2048',
                 'sub_category_id' => 'nullable|exists:sub_categories,sub_category_id',
+                'maxDistance' => 'nullable|integer',
                 'tax_record' => 'nullable|string',
                 'company_name' => 'nullable|string',
                 'id_number' => 'nullable|string',
@@ -173,8 +174,9 @@ class ServiceProviderController extends Controller
                 'birthday' => 'sometimes|date',
                 'nationality' => 'sometimes|in:egyptian,foreigner',
                 'gender' => 'sometimes|in:male,female',
-                'profile_photo' => 'nullable',
+                'profile_photo' => 'sometimes|nullable',
                 'sub_category_id' => 'sometimes|exists:sub_categories,sub_category_id',
+                'maxDistance' => 'sometimes|nullable|integer',
                 'tax_record' => 'nullable|string',
                 'company_name' => 'nullable|string',
                 'id_number' => 'nullable|string',
@@ -190,7 +192,6 @@ class ServiceProviderController extends Controller
                 }
                 $uploadResult = $this->cloudImageService->upload($path);
                 $validatedData['profile_photo'] = $uploadResult['secure_url']; // Update the Cloudinary URL
-                Log::info('Profile photo uploaded successfully', ['url' => $validatedData['profile_photo']]);
             }
 
             $provider->update($validatedData);

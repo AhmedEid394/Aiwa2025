@@ -24,6 +24,7 @@ class ServiceProvider extends Model
         'gender',
         'profile_photo',
         'sub_category_id',
+        'maxDistance',
         'tax_record',
         'company_name',
         'id_number',

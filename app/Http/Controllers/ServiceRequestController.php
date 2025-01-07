@@ -178,9 +178,14 @@ class ServiceRequestController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $serviceRequests = ServiceRequest::where('provider_id', $user->provider_id)
-            ->where('status', 'accepted')
-            ->orWhere('status', 'accepted but not payed')->latest()->get();
+        $serviceRequests = ServiceRequest::with('user')
+            ->where('provider_id', $user->provider_id)
+            ->where(function($query) {
+                $query->where('status', 'accepted')
+                    ->orWhere('status', 'accepted but not payed');
+            })
+            ->latest()
+            ->get();
 
         return response()->json([
             'data' => $serviceRequests,
@@ -192,7 +197,7 @@ class ServiceRequestController extends Controller
     {
         $user = auth()->user();
         if (!$user instanceof User) {
-            $serviceRequests = ServiceRequest::where('user_id', $user->provider_id)->
+            $serviceRequests = ServiceRequest::where('user_id', $user->provider_id)->with('Provider')->
             where('user_type','Provider')->latest()->get();
             return response()->json([
                 'data' => $serviceRequests,
