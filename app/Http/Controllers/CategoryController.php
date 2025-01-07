@@ -29,7 +29,7 @@ class CategoryController extends Controller
     public function show($id)
     {
         $category = Category::with('subCategories')->find($id);
-        
+
         if (!$category) {
             return response()->json(['error' => 'Category not found'], 404);
         }
@@ -40,13 +40,13 @@ class CategoryController extends Controller
     public function subCategory()
     {
         $subCategories = SubCategory::select('sub_category_id', 'name','image')->get();
-    
+
         return response()->json([
             'data' => $subCategories,
             'success' => true
         ], 200, ['Content-Type' => 'application/vnd.api+json'], JSON_UNESCAPED_SLASHES);
-    }    
-    
+    }
+
 
     public function update(Request $request, $id)
     {
@@ -58,6 +58,7 @@ class CategoryController extends Controller
         try {
             $validatedData = $request->validate([
                 'name' => 'sometimes|string|max:255|unique:categories,name,' . $id . ',category_id',
+                'name_ar' => 'nullable|string',
                 'image' => 'nullable|string',
                 'description' => 'nullable|string',
             ]);
@@ -82,14 +83,16 @@ class CategoryController extends Controller
 
     public function index()
     {
-        $categories = Category::select('category_id', 'name', 'image', 'description')->get();
-    
+        $categories = Category::latest()->get();
+
         $response = response()->json(
             [
                 'data' => $categories->map(function ($category) {
                     return [
                         'category_id' => $category->category_id,
                         'name' => $category->name,
+                        'name_ar' => $category->name_ar,
+                        'description' => $category->description,
                         'image' => $category->image ?? 'default_placeholder_image.png',
                     ];
                 }),
@@ -99,7 +102,7 @@ class CategoryController extends Controller
             ['Content-Type' => 'application/vnd.api+json'],
             JSON_UNESCAPED_SLASHES
         );
-    
+
         return $response;
     }
 }
