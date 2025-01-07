@@ -5,16 +5,22 @@ namespace App\Console;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use App\Http\Controllers\BmCashoutStatusController;
+use Illuminate\Support\Facades\Log;
 
 class Kernel extends ConsoleKernel
 {
 
     protected function schedule(Schedule $schedule)
     {
-        // Check transaction statuses every 30 minutes
         $schedule->call(function () {
-            app(BmCashoutStatusController::class)->checkTransactionStatuses();
-        })->everyThirtyMinutes();
+            try {
+                app(BmCashoutStatusController::class)->checkTransactionStatuses();
+            } catch (\Exception $e) {
+                Log::error('Transaction status check failed: ' . $e->getMessage());
+            }
+        })->everyThirtyMinutes()
+            ->withoutOverlapping()  // Prevent overlapping
+            ->runInBackground();    // Run in background
     }
 
     /**

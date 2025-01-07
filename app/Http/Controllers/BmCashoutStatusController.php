@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\BmCashoutStatusUpdate;
 use App\Models\BmCashoutStatus;
 use App\Models\BmCashoutPrepare;
 use App\Http\Controllers\SignerService;
@@ -197,27 +198,62 @@ class BmCashoutStatusController extends Controller
     }
 
     /**
-     * Send status request to bank
+     * Send status request to bank using cURL
      */
     private function sendStatusRequest($requestData)
     {
-        $response = Http::withoutVerifying() // Remove in production
-            ->get(config('services.bank_misr.status_api_url'), [
-                'request' => json_encode($requestData)
-            ]);
+        // Convert request data to JSON
+        $jsonRequest = json_encode($requestData);
 
-        if (!$response->successful()) {
+        // Build the URL with encoded JSON as query parameter
+        $baseUrl = config('services.bank_misr.status_api_url');
+        $url = $baseUrl . '?request=' . urlencode($jsonRequest);
+
+        // Initialize cURL session
+        $curl = curl_init();
+
+        // Set cURL options
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false, // Equivalent to withoutVerifying()
+            CURLOPT_TIMEOUT => 120,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'GET',
+        ]);
+
+        // Execute the request
+        $response = curl_exec($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
+        // Check for cURL errors
+        if (curl_errno($curl)) {
+            Log::error('Bank status API cURL error', [
+                'error' => curl_error($curl),
+                'request_data' => $requestData,
+                'formatted_url' => $url
+            ]);
+            curl_close($curl);
+            return null;
+        }
+
+        // Close cURL session
+        curl_close($curl);
+
+        // Check for unsuccessful response
+        if ($httpCode < 200 || $httpCode >= 300) {
             Log::error('Bank status API request failed', [
-                'status' => $response->status(),
-                'response' => $response->body(),
-                'request_data' => $requestData
+                'status' => $httpCode,
+                'response' => $response,
+                'request_data' => $requestData,
+                'formatted_url' => $url
             ]);
             return null;
         }
 
-        return json_decode(json_decode($response->body(), true), true);
+        // Handle double JSON encoding in response
+        return json_decode(json_decode($response, true), true);
     }
-
     /**
      * Process and save status response
      */
@@ -238,7 +274,7 @@ class BmCashoutStatusController extends Controller
         if ($statusCode === self::STATUS_SETTLED || in_array($statusCode, self::ERROR_STATUSES)) {
             $transaction->update(['prepared_flag' => false]);
         }
-
+        event(new BmCashoutStatusUpdate($status, $transaction->creditor_id));
         return [
             'transaction_id' => $transaction->transaction_id,
             'status_code' => $statusCode,
