@@ -11,6 +11,9 @@ use Illuminate\Validation\ValidationException;
 class ServiceController extends Controller
 {
     protected $cloudImageService;
+    protected const MAX_RETRIES = 3;
+    protected const INITIAL_DELAY = 1; // seconds
+    protected const MAX_DELAY = 5; // seconds
 
     public function __construct(CloudImageService $cloudImageService)
     {
@@ -42,45 +45,63 @@ class ServiceController extends Controller
         }
 
         try {
-            // Handle image uploads
             $uploadedPictures = [];
+
             if (!empty($validatedData['pictures'])) {
-                foreach ($validatedData['pictures'] as $base64Image) {
+                foreach ($validatedData['pictures'] as $index => $base64Image) {
                     // Skip if already a URL
                     if (filter_var($base64Image, FILTER_VALIDATE_URL)) {
                         $uploadedPictures[] = $base64Image;
                         continue;
                     }
 
-                    // Process base64 image
                     try {
-                        // Remove data URI scheme if present
-                        if (strpos($base64Image, 'data:image') !== false) {
-                            $base64Image = preg_replace('/^data:image\/\w+;base64,/', '', $base64Image);
+                        // Initial delay between uploads to prevent rate limiting
+                        if ($index > 0) {
+                            usleep(250000); // 0.25 second delay
                         }
 
-                        // Decode base64
-                        $imageData = base64_decode($base64Image);
-                        if (!$imageData) {
-                            Log::error('Failed to decode base64 image');
-                            continue;
-                        }
+                        // Process base64 image
+                        $imageData = $this->processBase64Image($base64Image);
 
                         // Create temporary file
-                        $tempFile = tempnam(sys_get_temp_dir(), 'service_img_');
-                        file_put_contents($tempFile, $imageData);
+                        $tempFile = $this->createTempFile($imageData);
 
-                        // Upload to cloud storage
-                        $result = $this->cloudImageService->upload($tempFile);
-                        if (isset($result['secure_url'])) {
-                            $uploadedPictures[] = $result['secure_url'];
+                        try {
+                            // Upload with retry logic
+                            $result = $this->uploadWithRetry($tempFile, $index);
+
+                            if ($result) {
+                                $uploadedPictures[] = $result;
+                                // Short delay after successful upload
+                                usleep(250000); // 0.25 second delay
+                            } else {
+                                throw new \Exception('Upload failed - empty result');
+                            }
+
+                        } catch (\Exception $e) {
+                            if (stripos($e->getMessage(), 'timeout') !== false ||
+                                stripos($e->getMessage(), 'abort') !== false) {
+                                Log::error('Upload timeout for image ' . $index . ': ' . $e->getMessage());
+                                return response()->json([
+                                    'error' => 'Upload timeout',
+                                    'details' => 'The upload process took too long. Please try again.'
+                                ], 408);
+                            }
+                            throw $e;
+                        } finally {
+                            // Clean up temporary file
+                            if (file_exists($tempFile)) {
+                                unlink($tempFile);
+                            }
                         }
 
-                        // Clean up temporary file
-                        unlink($tempFile);
                     } catch (\Exception $e) {
-                        Log::error('Image processing error: ' . $e->getMessage());
-                        continue;
+                        Log::error('Failed to process image at index ' . $index . ': ' . $e->getMessage());
+                        return response()->json([
+                            'error' => 'Failed to process image at position ' . ($index + 1),
+                            'details' => $e->getMessage()
+                        ], 500);
                     }
                 }
             }
@@ -89,14 +110,111 @@ class ServiceController extends Controller
             $validatedData['pictures'] = $uploadedPictures;
             $validatedData['provider_id'] = auth()->user()->provider_id;
 
-            // Create service
-            $service = Service::create($validatedData);
-            return response()->json($service, 201);
+            try {
+                // Create service with shorter timeout
+                $service = Service::create($validatedData);
+                return response()->json($service, 201);
+
+            } catch (\Exception $e) {
+                Log::error('Service creation database error: ' . $e->getMessage());
+                throw new \Exception('Failed to save service to database');
+            }
 
         } catch (\Exception $e) {
             Log::error('Service creation error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to create service'], 500);
+            return response()->json([
+                'error' => 'Failed to create service',
+                'details' => $e->getMessage()
+            ], 500);
         }
+    }
+
+    /**
+     * Upload file with improved retry logic
+     *
+     * @param string $tempFile
+     * @param int $index
+     * @return string|null
+     * @throws \Exception
+     */
+    private function uploadWithRetry(string $tempFile, int $index): ?string
+    {
+        $attempts = 0;
+        $delay = self::INITIAL_DELAY;
+        $lastException = null;
+
+        while ($attempts < self::MAX_RETRIES) {
+            try {
+                $result = $this->cloudImageService->upload($tempFile);
+
+                if (isset($result['secure_url'])) {
+                    return $result['secure_url'];
+                }
+
+                throw new \Exception('Invalid upload result');
+
+            } catch (\Exception $e) {
+                $lastException = $e;
+                $attempts++;
+
+                // Check for specific timeout or abort errors
+                if (stripos($e->getMessage(), 'timeout') !== false ||
+                    stripos($e->getMessage(), 'abort') !== false) {
+                    Log::warning("Upload timeout on attempt {$attempts} for image {$index}");
+                    throw new \Exception('Upload timeout error: ' . $e->getMessage());
+                }
+
+                if ($attempts < self::MAX_RETRIES) {
+                    Log::warning("Upload attempt {$attempts} failed for image {$index}: {$e->getMessage()}");
+
+                    // Progressive delay with cap
+                    $delay = min($delay * 2, self::MAX_DELAY);
+                    usleep($delay * 1000000); // Convert to microseconds
+                }
+            }
+        }
+
+        throw new \Exception('Max retry attempts reached: ' . $lastException->getMessage());
+    }
+
+    /**
+     * Process base64 image string
+     *
+     * @param string $base64Image
+     * @return string
+     * @throws \Exception
+     */
+    private function processBase64Image(string $base64Image): string
+    {
+        // Remove data URI scheme if present
+        if (strpos($base64Image, 'data:image') !== false) {
+            $base64Image = preg_replace('/^data:image\/\w+;base64,/', '', $base64Image);
+        }
+
+        // Decode base64
+        $imageData = base64_decode($base64Image);
+        if (!$imageData) {
+            throw new \Exception('Failed to decode base64 image');
+        }
+
+        return $imageData;
+    }
+
+    /**
+     * Create temporary file for image
+     *
+     * @param string $imageData
+     * @return string
+     * @throws \Exception
+     */
+    private function createTempFile(string $imageData): string
+    {
+        $tempFile = tempnam(sys_get_temp_dir(), 'service_img_') . '.jpg';
+        if (!file_put_contents($tempFile, $imageData)) {
+            throw new \Exception('Failed to create temporary file');
+        }
+
+        return $tempFile;
     }
 
     public function show($id)

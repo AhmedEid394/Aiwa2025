@@ -25,6 +25,7 @@ class CreateServiceProvidersTable extends Migration
             $table->longText('profile_photo')->nullable();
             $table->unsignedBigInteger('sub_category_id')->nullable();
             $table->foreign('sub_category_id')->references('sub_category_id')->on('sub_categories')->onDelete('cascade');
+            $table->integer('maxDistance')->nullable();
             $table->string('tax_record')->nullable();
             $table->string('company_name')->nullable();
             $table->string('id_number')->nullable();

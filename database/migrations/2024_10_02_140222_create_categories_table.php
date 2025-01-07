@@ -12,11 +12,11 @@ use Illuminate\Support\Facades\Schema;
     public function up(): void
     {
       Schema::create('categories', function (Blueprint $table) {
-            $table->id('category_id'); 
-            $table->string('name'); 
-            $table->longText('image')->nullable(); 
-            $table->text('description')->nullable(); 
-            $table->timestamps(); 
+            $table->id('category_id');
+            $table->string('name');
+            $table->string('name_ar');
+            $table->longText('image')->nullable();
+            $table->timestamps();
         });
     }
 

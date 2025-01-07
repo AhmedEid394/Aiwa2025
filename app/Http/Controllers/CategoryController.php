@@ -29,7 +29,7 @@ class CategoryController extends Controller
     public function show($id)
     {
         $category = Category::with('subCategories')->find($id);
-        
+
         if (!$category) {
             return response()->json(['error' => 'Category not found'], 404);
         }
@@ -40,13 +40,13 @@ class CategoryController extends Controller
     public function subCategory()
     {
         $subCategories = SubCategory::select('sub_category_id', 'name','image')->get();
-    
+
         return response()->json([
             'data' => $subCategories,
             'success' => true
         ], 200, ['Content-Type' => 'application/vnd.api+json'], JSON_UNESCAPED_SLASHES);
-    }    
-    
+    }
+
 
     public function update(Request $request, $id)
     {
@@ -83,7 +83,7 @@ class CategoryController extends Controller
     public function index()
     {
         $categories = Category::select('category_id', 'name', 'image', 'description')->get();
-    
+
         $response = response()->json(
             [
                 'data' => $categories->map(function ($category) {
@@ -99,7 +99,7 @@ class CategoryController extends Controller
             ['Content-Type' => 'application/vnd.api+json'],
             JSON_UNESCAPED_SLASHES
         );
-    
+
         return $response;
     }
 }

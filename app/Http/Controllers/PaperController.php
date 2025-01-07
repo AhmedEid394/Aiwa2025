@@ -16,6 +16,9 @@ use Illuminate\Validation\ValidationException;
 class PaperController extends Controller
 {
     protected $cloudImageService;
+    protected const MAX_RETRIES = 3;
+    protected const INITIAL_DELAY = 1; // seconds
+    protected const MAX_DELAY = 5; // seconds
 
     public function __construct(CloudImageService $cloudImageService)
     {
@@ -45,73 +48,202 @@ class PaperController extends Controller
 
             $uploadedUrls = [];
             $photoTypes = ['front_photo', 'back_photo', 'criminal_record_photo'];
-            $tempFiles = [];
 
-            // Use a single temporary directory for all images to improve cleanup management
+            // Create unique temporary directory
             $tempDir = sys_get_temp_dir() . '/' . Str::uuid();
-            mkdir($tempDir);
+            if (!mkdir($tempDir)) {
+                throw new \Exception('Failed to create temporary directory');
+            }
 
             try {
-                foreach ($photoTypes as $photoType) {
-                    if (!empty($validatedData[$photoType])) {
-                        $decodedData = base64_decode($validatedData[$photoType], true);
-                        if ($decodedData === false) {
-                            throw new ValidationException("Invalid base64 data for $photoType");
+                foreach ($photoTypes as $index => $photoType) {
+                    if (empty($validatedData[$photoType])) {
+                        continue;
+                    }
+
+                    try {
+                        // Initial delay between uploads to prevent rate limiting
+                        if ($index > 0) {
+                            usleep(250000); // 0.25 second delay
                         }
 
-                        // Save base64 image temporarily with faster write operation
-                        $tempPath = $tempDir . '/' . $photoType . '.jpg';
-                        file_put_contents($tempPath, $decodedData);
-                        $tempFiles[] = $tempPath;
+                        // Process and validate base64 image
+                        $imageData = $this->processBase64Image($validatedData[$photoType], $photoType);
 
-                        // Upload to cloud
-                        $uploadResult = $this->cloudImageService->upload($tempPath);
-                        if (!isset($uploadResult['secure_url'])) {
-                            throw new \Exception("Upload failed for $photoType");
+                        // Save to temporary file
+                        $tempFile = $this->createTempFile($imageData, $tempDir, $photoType);
+
+                        try {
+                            // Upload with retry logic
+                            $result = $this->uploadWithRetry($tempFile, $photoType);
+
+                            if ($result) {
+                                $uploadedUrls[$photoType] = $result;
+                                // Short delay after successful upload
+                                usleep(250000); // 0.25 second delay
+                            } else {
+                                throw new \Exception("Upload failed for {$photoType}");
+                            }
+
+                        } catch (\Exception $e) {
+                            if (stripos($e->getMessage(), 'timeout') !== false ||
+                                stripos($e->getMessage(), 'abort') !== false) {
+                                Log::error("Upload timeout for {$photoType}: " . $e->getMessage());
+                                throw new \Exception("Upload timeout for {$photoType}");
+                            }
+                            throw $e;
                         }
 
-                        $uploadedUrls[$photoType] = $uploadResult['secure_url'];
+                    } catch (\Exception $e) {
+                        Log::error("Failed to process {$photoType}: " . $e->getMessage());
+                        throw new \Exception("Failed to process {$photoType}: " . $e->getMessage());
                     }
                 }
-            } catch (\Exception $e) {
-                Log::error('Error during file upload: ' . $e->getMessage());
-                // Clean up on error
-                foreach ($tempFiles as $tempFile) {
-                    @unlink($tempFile);
+
+                try {
+                    // Save to database
+                    $paper = Paper::updateOrCreate(
+                        [
+                            'user_id' => $userId,
+                            'user_type' => $userType,
+                        ],
+                        array_merge($uploadedUrls, [
+                            'user_type' => $userType,
+                            'user_id' => $userId,
+                        ])
+                    );
+
+                    return response()->json([
+                        'message' => 'Papers uploaded successfully',
+                        'data' => $paper,
+                        'success' => true
+                    ], 200);
+
+                } catch (\Exception $e) {
+                    Log::error('Database save error: ' . $e->getMessage());
+                    throw new \Exception('Failed to save paper records: ' . $e->getMessage());
                 }
-                @rmdir($tempDir);
+
+            } catch (\Exception $e) {
                 throw $e;
+            } finally {
+                // Clean up all temporary files and directory
+                $this->cleanupTempFiles($tempDir);
             }
-
-            // Clean up temp files and directory
-            foreach ($tempFiles as $tempFile) {
-                @unlink($tempFile);
-            }
-            @rmdir($tempDir);
-
-            // Save to database
-            $paper = Paper::updateOrCreate(
-                [
-                    'user_id' => $userId,
-                    'user_type' => $userType,
-                ],
-                array_merge($uploadedUrls, [
-                    'user_type' => $userType,
-                    'user_id' => $userId,
-                ])
-            );
-
-            return response()->json([
-                'data' => $paper,
-                'success' => true
-            ], 200);
 
         } catch (\Exception $e) {
-            Log::error('Upload failed: ' . $e->getMessage());
+            Log::error('Papers upload failed: ' . $e->getMessage());
             return response()->json([
                 'error' => 'Upload failed: ' . $e->getMessage(),
                 'success' => false
             ], 500);
+        }
+    }
+
+    /**
+     * Upload file with improved retry logic
+     *
+     * @param string $tempFile
+     * @param string $photoType
+     * @return string|null
+     * @throws \Exception
+     */
+    private function uploadWithRetry(string $tempFile, string $photoType): ?string
+    {
+        $attempts = 0;
+        $delay = self::INITIAL_DELAY;
+        $lastException = null;
+
+        while ($attempts < self::MAX_RETRIES) {
+            try {
+                $result = $this->cloudImageService->upload($tempFile);
+
+                if (isset($result['secure_url'])) {
+                    return $result['secure_url'];
+                }
+
+                throw new \Exception("Invalid upload result for {$photoType}");
+
+            } catch (\Exception $e) {
+                $lastException = $e;
+                $attempts++;
+
+                if (stripos($e->getMessage(), 'timeout') !== false ||
+                    stripos($e->getMessage(), 'abort') !== false) {
+                    Log::warning("Upload timeout on attempt {$attempts} for {$photoType}");
+                    throw new \Exception("Upload timeout error for {$photoType}: " . $e->getMessage());
+                }
+
+                if ($attempts < self::MAX_RETRIES) {
+                    Log::warning("Upload attempt {$attempts} failed for {$photoType}: {$e->getMessage()}");
+
+                    // Progressive delay with cap
+                    $delay = min($delay * 2, self::MAX_DELAY);
+                    usleep($delay * 1000000); // Convert to microseconds
+                }
+            }
+        }
+
+        throw new \Exception("Max retry attempts reached for {$photoType}: " . $lastException->getMessage());
+    }
+
+    /**
+     * Process base64 image string
+     *
+     * @param string $base64Image
+     * @param string $photoType
+     * @return string
+     * @throws \Exception
+     */
+    private function processBase64Image(string $base64Image, string $photoType): string
+    {
+        // Remove data URI scheme if present
+        if (strpos($base64Image, 'data:image') !== false) {
+            $base64Image = preg_replace('/^data:image\/\w+;base64,/', '', $base64Image);
+        }
+
+        // Decode base64
+        $imageData = base64_decode($base64Image, true);
+        if ($imageData === false) {
+            throw new \Exception("Invalid base64 data for {$photoType}");
+        }
+
+        return $imageData;
+    }
+
+    /**
+     * Create temporary file for image
+     *
+     * @param string $imageData
+     * @param string $tempDir
+     * @param string $photoType
+     * @return string
+     * @throws \Exception
+     */
+    private function createTempFile(string $imageData, string $tempDir, string $photoType): string
+    {
+        $tempFile = $tempDir . '/' . $photoType . '_' . Str::random(10) . '.jpg';
+        if (!file_put_contents($tempFile, $imageData)) {
+            throw new \Exception("Failed to create temporary file for {$photoType}");
+        }
+
+        return $tempFile;
+    }
+
+    /**
+     * Clean up temporary files and directory
+     *
+     * @param string $tempDir
+     * @return void
+     */
+    private function cleanupTempFiles(string $tempDir): void
+    {
+        if (is_dir($tempDir)) {
+            $files = glob($tempDir . '/*');
+            foreach ($files as $file) {
+                @unlink($file);
+            }
+            @rmdir($tempDir);
         }
     }
 
