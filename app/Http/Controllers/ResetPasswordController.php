@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Exception;
+use Illuminate\Support\Facades\Mail;
 
 class ResetPasswordController extends Controller
 {
@@ -28,8 +29,11 @@ class ResetPasswordController extends Controller
                 $otp = $this->generateOtp();
                 $email = $request->email;
                 // Uncomment the line below to send the email in a production environment
-                // mail($email, 'Reset Password OTP', 'Your OTP is: '.$otp);
-
+// Send the OTP email using Laravel's Mail facade
+                Mail::raw('Your OTP is: ' . $otp, function ($message) use ($email) {
+                    $message->to($email)
+                        ->subject('Reset Password OTP');
+                });
                 // Store OTP in cache for 10 minutes
                 Cache::put('otp.' . $email, $otp, now()->addMinutes(10));
 
@@ -119,6 +123,31 @@ class ResetPasswordController extends Controller
             Log::error('Error in reset: ' . $e->getMessage());
             return response()->json([
                 'message' => 'An error occurred while resetting the password.',
+            ], 500);
+        }
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'new_password' => 'required|min:6',
+        ]);
+
+        try {
+            $user = $request->user();
+
+            $user->update([
+                'password' => Hash::make($request->new_password),
+            ]);
+
+            return response()->json([
+                'message' => 'Password changed successfully',
+                'status' => 'success',
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error in changePassword: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'An error occurred while changing the password.',
             ], 500);
         }
     }

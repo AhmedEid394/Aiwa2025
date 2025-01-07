@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Events\BmCashoutStatusUpdate;
 use App\Events\BookingStatusUpdated;
 use App\Events\ServiceRequested;
 use App\Events\ServiceRequestStatusUpdated;
 use App\Events\SystemNotificationEvent;
 use App\Events\MessageSent;
+use App\Listeners\BmCashoutStatusUpdateListener;
 use App\Listeners\SendBookingStatusUpdate;
 use App\Listeners\SendServiceRequestStatusUpdate;
 use App\Listeners\SendSystemNotification;
@@ -42,6 +44,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         SystemNotificationEvent::class => [
             SendSystemNotification::class,
+        ],
+        BmCashoutStatusUpdate::class => [
+            BmCashoutStatusUpdateListener::class,
         ],
     ];
 

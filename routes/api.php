@@ -212,3 +212,5 @@ Route::post('/password/confirm-otp', [ResetPasswordController::class, 'confirmOt
 
 // Route to reset password
 Route::post('/password/reset-password', [ResetPasswordController::class, 'reset']);
+
+Route::post("password/change", [ResetPasswordController::class, 'changePassword'])->middleware('auth:sanctum');
