@@ -351,7 +351,12 @@ public function paymentCallback(Request $request)
         $orderId = $request->input('orderId');
         $responseCode = $request->input('responseCode');
         $responseMessage = $request->input('responseMessage');
-
+        Log::info('Geidea Payment Callback', [
+            'sessionId' => $sessionId,
+            'orderId' => $orderId,
+            'responseCode' => $responseCode,
+            'responseMessage' => $responseMessage
+        ]);
         // Fetch order details from Geidea using the existing cURL method
         $response = $this->fetchGeideaOrderDetails($orderId);
 
@@ -386,7 +391,12 @@ public function paymentCallback(Request $request)
                 $reservation->save();
             }
         }
-
+        Log::info('Geidea Payment Callback Success', [
+            'sessionId' => $sessionId,
+            'orderId' => $orderId,
+            'responseCode' => $responseCode,
+            'responseMessage' => $responseMessage
+        ]);
     } catch (\Exception $e) {
         // Log error
         Log::error('Payment Callback Error: ' . $e->getMessage());

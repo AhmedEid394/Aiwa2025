@@ -116,7 +116,7 @@ class BmCashoutPrepareController extends Controller
         return [
             'MessageId' => $transaction->message_id,
             'TransactionId' => $transaction->transaction_id,
-            'CorporateCode' => $validatedData['CorporateCode'] ?? 'AYWACORP',
+            'CorporateCode' => $validatedData['CorporateCode'] ?? 'AIWACORP',
             'DebtorAccount' => $validatedData['DebtorAccount'],
             'CreditorAccountNumber' => $validatedData['CreditorAccountNumber'],
             'CreditorBank' => $validatedData['CreditorBank'],
