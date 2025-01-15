@@ -116,7 +116,7 @@ class BmCashoutPrepareController extends Controller
         return [
             'MessageId' => $transaction->message_id,
             'TransactionId' => $transaction->transaction_id,
-            'CorporateCode' => $validatedData['CorporateCode'] ?? 'AIWACORP',
+            'CorporateCode' => 'AIWACORP',
             'DebtorAccount' => $validatedData['DebtorAccount'],
             'CreditorAccountNumber' => $validatedData['CreditorAccountNumber'],
             'CreditorBank' => $validatedData['CreditorBank'],
@@ -184,7 +184,11 @@ class BmCashoutPrepareController extends Controller
             ->timeout(120)
             ->withHeaders(['Content-Type' => 'application/json'])
             ->post(config('services.bank_misr.api_url'), $postData);
-
+        Log::info('Bank API request', [
+            'status' => $response->status(),
+            'response' => $response->json(),
+            'request_data' => $postData
+        ]);
         if (!$response->successful()) {
             Log::error('Bank API request failed', [
                 'status' => $response->status(),
