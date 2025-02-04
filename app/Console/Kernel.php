@@ -2,6 +2,7 @@
 
 namespace App\Console;
 
+use App\Http\Controllers\SignerService;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use App\Http\Controllers\BmCashoutStatusController;
@@ -23,8 +24,9 @@ class Kernel extends ConsoleKernel
                     FILE_APPEND
                 );
 
-                app(BmCashoutStatusController::class)->checkTransactionStatuses();
-
+//                app(BmCashoutStatusController::class)->checkTransactionStatuses();
+                $bmCashoutStatusController = new BmCashoutStatusController(new SignerService());
+                $bmCashoutStatusController->checkTransactionStatuses();
                 $message = 'Transaction status check completed at: ' . now();
                 Log::info($message);
                 file_put_contents(

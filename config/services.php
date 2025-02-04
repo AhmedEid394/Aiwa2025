@@ -32,8 +32,8 @@ return [
     ],
 
     'bank_misr' => [
-    'api_url' => env('BANK_MISR_API_URL', 'https://10.232.15.5/EG-ACH-Corporate-Webstation-Token/CorpayWebAPI/api/Transactions'),
-    'status_api_url' => env('BANK_MISR_STATUS_API_URL'),
+    'api_url' => env('BANK_MISR_API_URL', 'https://10.232.15.5/EG-ACH-Corporate-Web-Station-MISR/CorpayWebAPI/api/Transactions'),
+    'status_api_url' => env('BANK_MISR_STATUS_API_URL','https://10.232.15.5/EG-ACH-Corporate-Web-Station-MISR/CorpayWebAPI'),
     'private_key_path' => env('BANK_MISR_PRIVATE_KEY_PATH', storage_path('app/private/private_key.pem')),
     'testing_mode' => env('BANK_MISR_TESTING_MODE', true),
     'status_check_interval' => env('BANK_MISR_STATUS_CHECK_INTERVAL', 30),

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
-
+use Illuminate\Support\Facades\DB;
 class BmCashoutPrepareController extends Controller
 {
 
@@ -22,24 +22,33 @@ class BmCashoutPrepareController extends Controller
     }
 
 
+
+
     public function generateSignAndSendTransaction(Request $request)
     {
+        DB::beginTransaction();
+
         try {
             // Validate the incoming request
             $validatedData = $this->validateTransactionRequest($request);
-
+            $validatedData['CreditorName'] = $request->user()->f_name . ' ' . $request->user()->l_name;
+            $validatedData['CreditorId'] = $request->user()->provider_id;
 
             // Create initial transaction record and get the generated IDs
             $transaction = $this->createInitialTransaction();
 
             if (!$transaction) {
-                return response()->json(['error' => 'Failed to create transaction record'], 500);
+                DB::rollBack(); // Rollback transaction if transaction creation fails
+                return response()->json([
+                    'status' => 'error',
+                    'error' => 'Failed to create transaction record'
+                ], 500);
             }
 
             // Refresh to get the trigger-generated IDs
             $transaction->refresh();
 
-            // Prepare transaction data with the generated IDs
+            // Prepare transaction data
             $transactionData = $this->prepareTransactionData($validatedData, $transaction);
 
             // Generate signature
@@ -49,6 +58,7 @@ class BmCashoutPrepareController extends Controller
             );
 
             if (!$signature) {
+                DB::rollBack(); // Rollback transaction if signature generation fails
                 throw new \Exception('Failed to generate signature');
             }
 
@@ -60,25 +70,59 @@ class BmCashoutPrepareController extends Controller
 
             // For testing, return prepared data without actual API call
             if (config('services.bank_misr.testing_mode', true)) {
+                DB::commit(); // Commit transaction if all steps are successful
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'Transaction prepared successfully',
-                    'data' => $postData
+                    'data' => [
+                        'postData' => $postData,
+                        'response' => [
+                            'ResponseCode' => '8000',
+                            'ResponseDescription' => 'Received and Validated Successfully',
+                            'MessageId' => $postData['MessageId'],
+                            'TransactionId' => $postData['TransactionId'],
+                            'Signature' => $signature
+                        ]
+                    ]
                 ]);
             }
 
-            // Send to Bank Misr API
+            // Send data to bank API
             $response = $this->sendToBank($postData);
 
-            return response()->json($response);
+            // Process response and return formatted result
+            if ($response['ResponseCode'] === '8000') {
+                DB::commit(); // Commit transaction if bank response is successful
+                return response()->json([
+                    'status' => 'success',
+                    'data' => [
+                        'postData' => $postData,
+                        'response' => $response
+                    ]
+                ]);
+            } else {
+                DB::rollBack(); // Rollback transaction if bank response is not successful
+                return response()->json([
+                    'status' => 'error',
+                    'error' => $response['ResponseDescription']
+                ], 400);
+            }
         } catch (ValidationException $e) {
-            return response()->json(['error' => 'Validation failed', 'details' => $e->errors()], 422);
+            DB::rollBack(); // Rollback transaction if validation fails
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Validation failed',
+                'details' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
+            DB::rollBack(); // Rollback transaction for any other exception
             Log::error('Transaction processing failed: ' . $e->getMessage(), [
                 'exception' => $e,
                 'request_data' => $request->all()
             ]);
-            return response()->json(['error' => 'Transaction processing failed'], 500);
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Transaction processing failed'
+            ], 500);
         }
     }
 
@@ -94,9 +138,9 @@ class BmCashoutPrepareController extends Controller
             'CreditorBank' => 'required|string',
             'TransactionAmount' => 'required|numeric|min:0',
             'Currency' => 'required|string|size:3',
-            'CreditorName' => 'required|string',
+//            'CreditorName' => 'required|string',
             'CategoryCode' => 'required|string',
-            'CreditorId' => 'required|string'
+//            'CreditorId' => 'required|string'
         ]);
     }
 
@@ -117,7 +161,7 @@ class BmCashoutPrepareController extends Controller
             'MessageId' => $transaction->message_id,
             'TransactionId' => $transaction->transaction_id,
             'CorporateCode' => 'AIWACORP',
-            'DebtorAccount' => $validatedData['DebtorAccount'],
+            'DebtorAccount' => '7990001000002795',
             'CreditorAccountNumber' => $validatedData['CreditorAccountNumber'],
             'CreditorBank' => $validatedData['CreditorBank'],
             'TransactionAmount' => number_format((float) $validatedData['TransactionAmount'], 4, '.', ''),
@@ -180,64 +224,98 @@ class BmCashoutPrepareController extends Controller
      */
     private function sendToBank($postData)
     {
-        $response = Http::withoutVerifying()
-            ->timeout(120)
-            ->withHeaders(['Content-Type' => 'application/json'])
-            ->post(config('services.bank_misr.api_url'), $postData);
-        Log::info('Bank API request', [
-            'status' => $response->status(),
-            'response' => $response->json(),
-            'request_data' => $postData
-        ]);
-        if (!$response->successful()) {
-            Log::error('Bank API request failed', [
-                'status' => $response->status(),
-                'response' => $response->json(),
-                'request_data' => $postData
-            ]);
-            throw new \Exception('Failed to communicate with bank API');
-        }
+        try {
+            $baseUrl = config('services.bank_misr.api_url');
 
-        // Handle potentially double-encoded JSON response
-        $decodedResponse = $response->json();
+            Log::info('Sending request to bank API', ['request_data' => $postData]);
 
-        // If the response is a string and appears to be JSON, decode it again
-        if (is_string($decodedResponse) && str_starts_with(trim($decodedResponse), '{')) {
-            try {
+            $response = Http::withoutVerifying()
+                ->timeout(120)
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->post($baseUrl, $postData);
+
+            $decodedResponse = json_decode($response->body(), true);
+
+            if (is_string($decodedResponse) && str_starts_with(trim($decodedResponse), '{')) {
                 $decodedResponse = json_decode($decodedResponse, true);
-            } catch (\Exception $e) {
-                Log::error('Failed to decode double-encoded JSON response', [
-                    'original_response' => $decodedResponse,
-                    'error' => $e->getMessage()
-                ]);
-                throw new \Exception('Invalid response format from bank API');
             }
-        }
 
-        // Verify we have the expected response structure
-        if (!is_array($decodedResponse) || !isset($decodedResponse['ResponseCode'])) {
-            Log::error('Unexpected response structure from bank API', [
-                'response' => $decodedResponse
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($decodedResponse['ResponseCode'])) {
+                Log::error('Invalid response from bank API', ['response' => $response->body()]);
+                throw new \Exception('Invalid response structure from bank API');
+            }
+
+            $this->updateTransactionWithResponse($postData['TransactionId'], $decodedResponse['ResponseCode'], $decodedResponse['ResponseDescription']);
+
+            return $decodedResponse;
+        } catch (\Exception $e) {
+            Log::error('Bank API request failed', ['error' => $e->getMessage()]);
+            throw $e;
+        }
+    }
+    /**
+     * Decode the API response and handle double-encoded JSON
+     */
+    private function decodeResponse($response)
+    {
+        try {
+            $decodedResponse = $response->json();
+
+            // Handle double-encoded JSON
+            if (is_string($decodedResponse) && str_starts_with(trim($decodedResponse), '{')) {
+                $decodedResponse = json_decode($decodedResponse, true);
+
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new \Exception('JSON decode error: ' . json_last_error_msg());
+                }
+            }
+
+            return $decodedResponse;
+
+        } catch (\Exception $e) {
+            Log::error('Failed to decode API response', [
+                'original_response' => $response->body(),
+                'error' => $e->getMessage()
             ]);
-            throw new \Exception('Invalid response structure from bank API');
+
+            throw new \Exception('Invalid response format from bank API: ' . $e->getMessage());
         }
-
-        // Update transaction with response
-        $this->updateTransactionWithResponse(
-            $postData['TransactionId'],
-            $decodedResponse['ResponseCode'],
-            $decodedResponse['ResponseDescription'] ?? null
-        );
-
-        return [
-            'status' => 'success',
-            'data' => [
-                'postData' => $postData,
-                'response' => $decodedResponse
-            ]
-        ];
     }
 
+    /**
+     * Validate the response structure
+     */
+    private function validateResponseStructure($decodedResponse)
+    {
+        if (!is_array($decodedResponse)) {
+            throw new \Exception('Invalid response type: expected array, got ' . gettype($decodedResponse));
+        }
+
+        if (!isset($decodedResponse['ResponseCode'])) {
+            throw new \Exception('Missing required field: ResponseCode');
+        }
+
+        // Add any additional validation rules here
+        return true;
+    }
+
+    /**
+     * Get formatted error message from response
+     */
+    private function getErrorMessage($response)
+    {
+        try {
+            $body = $response->json();
+
+            return $body['ResponseDescription']
+                ?? $body['message']
+                ?? $body['error']
+                ?? "HTTP {$response->status()}";
+
+        } catch (\Exception $e) {
+            return "HTTP {$response->status()}: Unable to parse error message";
+        }
+    }
     /**
      * Update transaction with API response
      */

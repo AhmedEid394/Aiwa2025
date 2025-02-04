@@ -39,7 +39,7 @@ class RatingController extends Controller
         if (is_null($averageRating)) {
             return response()->json([
                 'message' => 'No ratings found for this provider.',
-                'average_rating' => 1
+                'average_rating' => 5
             ]);
         }
 

@@ -92,17 +92,27 @@ class SignerService
     public function generateSendTransactionSignature(array $transactionData, string $privateKeyPath, string $encoding = 'UTF-8')
     {
         try {
-            // Create signature string
-            $signString = implode('', [
-                $transactionData['MessageId'],
-                $transactionData['TransactionId'],
-                $transactionData['CorporateCode'],
-                $transactionData['DebtorAccount'],
-                $transactionData['CreditorAccountNumber'],
-                $transactionData['CreditorBank'],
-                $transactionData['TransactionAmount'],
-                $transactionData['Currency']
-            ]);
+            if(isset($transactionData['status']) && $transactionData['status'] == true) {
+                // Create signature string
+                $signString = implode('', [
+                    $transactionData['MessageId'],
+                    $transactionData['TransactionId'],
+                    $transactionData['CorporateCode'],
+                ]);
+            }else{
+                // Create signature string
+                $signString = implode('', [
+                    $transactionData['MessageId'],
+                    $transactionData['TransactionId'],
+                    $transactionData['CorporateCode'],
+                    $transactionData['DebtorAccount'],
+                    $transactionData['CreditorAccountNumber'],
+                    $transactionData['CreditorBank'],
+                    $transactionData['TransactionAmount'],
+                    $transactionData['Currency']
+                ]);
+            }
+
 
             // Encode the data
             $encodedSignString = $this->encodeData($signString, $encoding);

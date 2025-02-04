@@ -202,6 +202,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/providers/profile', [ServiceProviderController::class, 'show']);
     Route::post('/providers/profile', [ServiceProviderController::class, 'update']);
     Route::delete('/providers/profile', [ServiceProviderController::class, 'destroy']);
+    Route::get('/providers', [ServiceProviderController::class, 'index']);
+    Route::get('/providers/get/{id}', [ServiceProviderController::class, 'getProvider']);
+    Route::post('/providers/update/{id}', [ServiceProviderController::class, 'updateProvider']);
 });
 
 // Route to check email and send OTP

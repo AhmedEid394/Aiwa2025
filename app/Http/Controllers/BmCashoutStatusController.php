@@ -14,72 +14,24 @@ class BmCashoutStatusController extends Controller
 {
     protected $signerService;
 
-    // Status code constants
     const STATUS_INITIAL_SUCCESS = '8000';
-    const FIRST_STATUS_PROCESSING = '8111';
     const STATUS_PROCESSING = '8222';
     const STATUS_SETTLED = '8333';
-    const STOP_CHECK_STATUSES = [
-        '8001',
-        '8002',
-        '8003',
-        '8004',
-        '8005',
-        '8006',
-        '8007',
-        '8008',
-        '8011',
-        '8888'
-    ];
-
-    const ERROR_STATUSES = [
-        '0100',
-        '0101',
-        '0102',
-        '0103',
-        '0104',
-        '0105',
-        '0106',
-        '0107',
-        '0108',
-        '0109',
-        '0110',
-        '0111',
-        '0112',
-        '0001',
-        '0002',
-        '0003',
-        '0004',
-        '0005',
-        '0006',
-        '0007',
-        '0008',
-        '0009',
-        '0010',
-        '0011',
-        '0012',
-        '0013',
-        '0014'
-    ];
+    const STOP_CHECK_STATUSES = ['8001', '8002', '8003', '8004', '8005', '8006', '8007', '8008', '8011', '8888'];
+    const ERROR_STATUSES = ['0100', '0101', '0102', '0103', '0104','0105','0106','0107','0108', '0001', '0002', '0003'];
 
     public function __construct(SignerService $signerService)
     {
         $this->signerService = $signerService;
     }
 
-
-    /**
-     * Check status of transactions based on configured rules
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function checkTransactionStatuses()
     {
         try {
-            $results = [];
+            $this->logMessage('Starting transaction status check');
 
-            // Get transactions that need status check based on rules
             $transactions = $this->getTransactionsForStatusCheck();
+            $results = [];
 
             foreach ($transactions as $transaction) {
                 $result = $this->processTransactionStatus($transaction);
@@ -88,180 +40,152 @@ class BmCashoutStatusController extends Controller
                 }
             }
 
+            $this->logMessage('Transaction status check completed');
+
             return response()->json([
                 'status' => 'success',
                 'results' => $results
             ]);
         } catch (\Exception $e) {
-            Log::error('Status check failed: ' . $e->getMessage());
+            $this->logMessage('Transaction status check failed: ' . $e->getMessage(), 'error');
             return response()->json(['error' => 'Status check failed'], 500);
         }
     }
 
-    /**
-     * Get transactions that need status check based on rules
-     */
     private function getTransactionsForStatusCheck()
     {
-        $normalCheckTime = Carbon::now()->subMinutes(
-            config('services.bank_misr.status_check_interval', 30)
-        );
+        $normalCheckTime = Carbon::now()->subMinutes(config('services.bank_misr.status_check_interval', 30));
         $dailyCheckTime = Carbon::now()->subDay();
 
-        return BmCashoutPrepare::with('status')
+        $transactions = BmCashoutPrepare::with('status')
             ->where(function ($query) use ($normalCheckTime, $dailyCheckTime) {
-                // Regular 30-40 minute check for transactions with 8000 status
                 $query->where(function ($q) use ($normalCheckTime) {
                     $q->where('response_code', self::STATUS_INITIAL_SUCCESS)
                         ->where('prepared_flag', true)
                         ->where('updated_at', '<=', $normalCheckTime);
                 })
-                // Daily check for transactions with 8222 status
-                ->orWhereHas('status', function ($q) use ($dailyCheckTime) {
-                    $q->where('transaction_status_code', self::STATUS_PROCESSING)
-                        ->where('updated_at', '<=', $dailyCheckTime);
-                });
+                    ->orWhereHas('status', function ($q) use ($dailyCheckTime) {
+                        $q->where('transaction_status_code', self::STATUS_PROCESSING)
+                            ->where('updated_at', '<=', $dailyCheckTime);
+                    });
             })
-            // Exclude transactions with stop-check statuses
             ->whereDoesntHave('status', function ($query) {
-                $query->whereIn('transaction_status_code', array_merge(
-                    self::STOP_CHECK_STATUSES,
-                    self::ERROR_STATUSES
-                ));
+                $query->whereIn('transaction_status_code', array_merge(self::STOP_CHECK_STATUSES, self::ERROR_STATUSES));
             })
             ->get();
+
+        $this->logMessage('Found ' . count($transactions) . ' transactions to process');
+
+        return $transactions;
     }
 
-    /**
-     * Process individual transaction status
-     */
     private function processTransactionStatus($transaction)
     {
         try {
-            // Create or get status record
+            $this->logMessage("Processing transaction: {$transaction->transaction_id}");
+
             $status = $this->getOrCreateStatus($transaction);
-
-            // Generate signature and prepare request data
             $requestData = $this->prepareStatusRequest($transaction);
-
-            // Send request to bank
             $response = $this->sendStatusRequest($requestData);
 
             if (!$response) {
                 return null;
             }
 
-            // Process and save response
             return $this->processStatusResponse($transaction, $status, $response, $requestData['Signature']);
         } catch (\Exception $e) {
-            Log::error('Failed to process transaction status', [
-                'transaction_id' => $transaction->transaction_id,
-                'error' => $e->getMessage()
-            ]);
+            $this->logMessage('Failed to process transaction status for ' . $transaction->transaction_id . ': ' . $e->getMessage(), 'error');
             return null;
         }
     }
 
-    /**
-     * Get or create status record for transaction
-     */
     private function getOrCreateStatus($transaction)
     {
-        return BmCashoutStatus::firstOrCreate(
-            ['transaction_id' => $transaction->transaction_id],
+        return BmCashoutStatus::updateOrCreate(
+            ['transaction_id' => $transaction->transaction_id],  // Search condition
             [
-                'bm_cashout_id' => $transaction->id,
-                'message_id' => null // Will be set by database trigger
-            ]
+                'bm_cashout_id' => $transaction->bm_cashout_id,
+                'message_id' => $this->generateUniqueMessageId($transaction)
+            ] // Fields to update or insert
         );
     }
 
-    /**
-     * Prepare status request data
-     */
+    private function generateUniqueMessageId($transaction)
+    {
+        return substr(uniqid($transaction->transaction_id . '-', true), 0, 50);
+    }
+
     private function prepareStatusRequest($transaction)
     {
+        $transaction->load('status');
+        $transaction->status->update([
+            'message_id' => $this->generateUniqueMessageId($transaction)
+        ]);
+
         $requestData = [
-            'MessageId' => $transaction->status->message_id,
+            'MessageId' => $transaction->status?->message_id,
             'TransactionId' => $transaction->transaction_id,
-            'CorporateCode' => $transaction->corporate_code
+            'CorporateCode' => $transaction->corporate_code,
+            'status' => true
         ];
+
+        $this->logMessage('Data before signature generation: ' . json_encode($requestData, JSON_PRETTY_PRINT));
 
         $signature = $this->signerService->generateSendTransactionSignature(
             $requestData,
             config('services.bank_misr.private_key_path')
         );
 
-        $requestData['Signature'] = rawurlencode($signature);
+        $requestData['Signature'] = $signature;
+
+        $this->logMessage("Prepared request data for transaction: " . json_encode($requestData, JSON_PRETTY_PRINT));
 
         return $requestData;
     }
 
-    /**
-     * Send status request to bank using cURL
-     */
     private function sendStatusRequest($requestData)
     {
-        // Convert request data to JSON
-        $jsonRequest = json_encode($requestData);
+        try {
+            $baseUrl = config('services.bank_misr.status_api_url');
 
-        // Build the URL with encoded JSON as query parameter
-        $baseUrl = config('services.bank_misr.status_api_url');
-        $url = $baseUrl . '?request=' . urlencode($jsonRequest);
+            // Log the request being sent
+            $this->logMessage('Sending status request to bank API: ' . json_encode($requestData, JSON_PRETTY_PRINT));
 
-        // Initialize cURL session
-        $curl = curl_init();
+            // Send GET request with the formatted request data
+            $response = Http::withoutVerifying()
+                ->timeout(120)
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->get($baseUrl . '/api/Transactions', ['request' => json_encode($requestData, JSON_UNESCAPED_SLASHES)]);
 
-        // Set cURL options
-        curl_setopt_array($curl, [
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_SSL_VERIFYPEER => false, // Equivalent to withoutVerifying()
-            CURLOPT_TIMEOUT => 120,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'GET',
-        ]);
+            // Decode JSON response
+            $decodedResponse = json_decode($response->body(), true);
 
-        // Execute the request
-        $response = curl_exec($curl);
-        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+            // Handle double-encoded JSON response
+            if (is_string($decodedResponse) && str_starts_with(trim($decodedResponse), '{')) {
+                $decodedResponse = json_decode($decodedResponse, true);
+            }
 
-        // Check for cURL errors
-        if (curl_errno($curl)) {
-            Log::error('Bank status API cURL error', [
-                'error' => curl_error($curl),
-                'request_data' => $requestData,
-                'formatted_url' => $url
-            ]);
-            curl_close($curl);
-            return null;
+            // Validate response structure
+            if (json_last_error() !== JSON_ERROR_NONE || !isset($decodedResponse['TransactionStatusCode'])) {
+                $this->logMessage('Invalid response from bank API: ' . $response->body(), 'error');
+                throw new \Exception('Invalid response structure from bank API');
+            }
+
+            // Log successful response
+            $this->logMessage('Received status response from bank API: ' . json_encode($decodedResponse, JSON_PRETTY_PRINT));
+
+            return $decodedResponse;
+
+        } catch (\Exception $e) {
+            $this->logMessage('Failed to send status request to bank API: ' . $e->getMessage(), 'error');
+            throw $e;
         }
-
-        // Close cURL session
-        curl_close($curl);
-
-        // Check for unsuccessful response
-        if ($httpCode < 200 || $httpCode >= 300) {
-            Log::error('Bank status API request failed', [
-                'status' => $httpCode,
-                'response' => $response,
-                'request_data' => $requestData,
-                'formatted_url' => $url
-            ]);
-            return null;
-        }
-
-        // Handle double JSON encoding in response
-        return json_decode(json_decode($response, true), true);
     }
-    /**
-     * Process and save status response
-     */
+
     private function processStatusResponse($transaction, $status, $response, $signature)
     {
         $statusCode = $response['TransactionStatusCode'];
 
-        // Update status record
         $status->update([
             'transaction_status_code' => $statusCode,
             'transaction_status_description' => $response['TransactionStatusDescription'],
@@ -270,11 +194,14 @@ class BmCashoutStatusController extends Controller
             'signature' => $signature
         ]);
 
-        // Handle specific status codes
         if ($statusCode === self::STATUS_SETTLED || in_array($statusCode, self::ERROR_STATUSES)) {
             $transaction->update(['prepared_flag' => false]);
         }
+
         event(new BmCashoutStatusUpdate($status, $transaction->creditor_id));
+
+        $this->logMessage("Transaction ID {$transaction->transaction_id} updated with status: $statusCode");
+
         return [
             'transaction_id' => $transaction->transaction_id,
             'status_code' => $statusCode,
@@ -282,19 +209,13 @@ class BmCashoutStatusController extends Controller
         ];
     }
 
-    public function index()
+    private function logMessage($message, $level = 'info')
     {
-        $statuses = BmCashoutStatus::with('prepare')->get();
-        return response()->json($statuses);
+        Log::$level($message);
+        file_put_contents(
+            storage_path('logs/scheduler.log'),
+            "[" . now() . "] " . strtoupper($level) . ": " . $message . PHP_EOL,
+            FILE_APPEND
+        );
     }
-
-    public function show($id)
-    {
-        $status = BmCashoutStatus::with('prepare')->find($id);
-        if (!$status) {
-            return response()->json(['error' => 'Cashout status not found'], 404);
-        }
-        return response()->json($status);
-    }
-
 }

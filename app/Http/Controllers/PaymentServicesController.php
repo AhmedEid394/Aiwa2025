@@ -135,6 +135,10 @@ class PaymentServicesController extends Controller
                 'message' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
+            Log::error('Payment Session Creation Error', [
+                'error_message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage()
@@ -307,6 +311,7 @@ class PaymentServicesController extends Controller
      */
     private function processGeideaResponse(array $responseData, array $validatedData,Booking|ServiceRequest $reservation, float $amount, array $fees)
     {
+        Log::info('Geidea API Response', $responseData);
         if ($responseData['responseMessage'] === 'Success') {
 
             $paymentRecord = GeideaPayment::create([

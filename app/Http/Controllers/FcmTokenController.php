@@ -29,8 +29,7 @@ class FcmTokenController extends Controller
 
         FcmToken::updateOrCreate(
             [
-                'user_id' => $user_id,
-                'user_type' => $user_type
+                'token' => $validated['fcm_token']
             ],
             [
                 'user_id' =>$user_id,

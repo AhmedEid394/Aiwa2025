@@ -16,10 +16,10 @@ use Illuminate\Support\Facades\Schema;
             $table->unsignedBigInteger('user_id');
             $table->enum('user_type', ['user', 'Provider']); // User or service provider
             $table->enum('transaction_type', ['cash_out','cash_in']); // Transaction type
-            $table->unsignedBigInteger('service_id'); // FK to categories
+            $table->unsignedBigInteger('service_id')->nullable(); // FK to categories
             $table->foreign('service_id')->references('service_id')->on('services')->onDelete('cascade');// FK to categories// The booked service
 
-            $table->unsignedBigInteger('booking_id'); // FK to service requests (optional)
+            $table->unsignedBigInteger('booking_id')->nullable(); // FK to service requests (optional)
             $table->foreign('booking_id')->references('booking_id')->on('bookings')->onDelete('cascade');
             $table->decimal('amount', 10, 2); // Transaction amount
             $table->enum('status', ['pending', 'completed', 'failed', 'refunded'])->default('pending'); // Transaction status

@@ -24,13 +24,13 @@ class Transaction extends Authenticatable
         'transaction_reference',
     ];
 
-    public function Service()
+    public function service()
     {
-        return $this->hasMany(Service::class, 'service_id');
+        return $this->hasOne(Service::class, 'service_id');
     }
 
     public function bookings()
     {
-        return $this->hasMany(Booking::class, 'booking_id');
+        return $this->hasOne(Booking::class, 'booking_id');
     }
 }

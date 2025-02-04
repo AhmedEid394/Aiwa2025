@@ -226,4 +226,72 @@ class ServiceProviderController extends Controller
             return response()->json(['error' => 'An error occurred during deletion. Please try again.'], 500);
         }
     }
+
+    public function index(Request $request)
+    {
+        $providers = ServiceProvider::latest()->get();
+        return response()->json($providers);
+    }
+
+    public function getProvider(Request $request, $id)
+    {
+        $provider = ServiceProvider::find($id);
+        if (!$provider) {
+            return response()->json(['error' => 'Service provider not found'], 404);
+        }
+        return response()->json($provider);
+    }
+
+    public function updateProvider(Request $request, $id)
+    {
+        try {
+            Log::info('Updating service provider details', ['request' => $request->all()]);
+            $provider = ServiceProvider::find($id);
+            if (!$provider) {
+                return response()->json(['error' => 'Service provider not found'], 404);
+            }
+
+            $validatedData = $request->validate([
+                'f_name' => 'sometimes|string|max:255',
+                'l_name' => 'sometimes|string|max:255',
+                'email' => 'sometimes|string|email|max:255|unique:service_providers,email,' . $provider->provider_id . ',provider_id',
+                'phone' => 'sometimes|string|unique:service_providers,phone,' . $provider->provider_id . ',provider_id',
+                'provider_type' => 'sometimes|in:freelance,corporate',
+                'birthday' => 'sometimes|date',
+                'nationality' => 'sometimes|in:egyptian,foreigner',
+                'gender' => 'sometimes|in:male,female',
+                'profile_photo' => 'sometimes|nullable',
+                'sub_category_id' => 'sometimes|exists:sub_categories,sub_category_id',
+                'maxDistance' => 'sometimes|nullable|integer',
+                'tax_record' => 'nullable|string',
+                'company_name' => 'nullable|string',
+                'id_number' => 'nullable|string',
+                'passport_number' => 'nullable|string',
+            ]);
+
+            // Upload profile photo to Cloudinary if provided
+            if ($request->hasFile('profile_photo')) {
+                Log::info('Uploading profile photo to Cloudinary');
+                $path = $request->file('profile_photo')->getRealPath();
+                if (!$path) {
+                    return response()->json(['error' => 'Invalid profile photo provided'], 400);
+                }
+                $uploadResult = $this->cloudImageService->upload($path);
+                $validatedData['profile_photo'] = $uploadResult['secure_url']; // Update the Cloudinary URL
+            }
+
+            $provider->update($validatedData);
+
+            return response()->json($provider, 200);
+        } catch (\Exception $e) {
+            Log::error('Error during service provider update', [
+                'message' => $e->getMessage(),
+                'stack' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'error' => 'An error occurred during the update. Please try again.',
+                'message' => $e->getMessage(),
+            ], $e->getCode() ?: 500);
+        }
+    }
 }
