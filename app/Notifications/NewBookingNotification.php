@@ -10,16 +10,16 @@ use NotificationChannels\Fcm\FcmChannel;
 use NotificationChannels\Fcm\FcmMessage;
 use NotificationChannels\Fcm\Resources\Notification as FcmNotification;
 
-class BmCashoutStatusNotification extends Notification
+class NewBookingNotification extends Notification
 {
     use Queueable;
-    private $status;
+    public $booking;
     /**
      * Create a new notification instance.
      */
-    public function __construct($status)
+    public function __construct($booking)
     {
-        $this->status = $status;
+        $this->booking = $booking;
     }
 
     /**
@@ -32,11 +32,21 @@ class BmCashoutStatusNotification extends Notification
         return ['database', FcmChannel::class];
     }
 
+    /**
+     * Get the mail representation of the notification.
+     */
+    public function toMail(object $notifiable): MailMessage
+    {
+        return (new MailMessage)
+                    ->line('The introduction to the notification.')
+                    ->action('Notification Action', url('/'))
+                    ->line('Thank you for using our application!');
+    }
     public function toFcm($notifiable): FcmMessage
     {
         return (new FcmMessage(notification: new FcmNotification(
-            title: 'Transaction Status Updated',
-            body: 'Your transaction status has been updated to '.$this->status,
+            title: 'New Booking',
+            body: 'You have a new booking request',
         )))
             ->custom([
                 'android' => [
@@ -52,8 +62,8 @@ class BmCashoutStatusNotification extends Notification
                     'payload' => [
                         'aps' => [
                             'alert' => [
-                                'title' => 'Transaction Status Updated',
-                                'body' => 'Your transaction status has been updated to '.$this->status->transaction_status,
+                                'title'=> 'New Booking',
+                                'body'=> 'You have a new booking request',
                             ],
                             'sound' => 'default'
                         ],
@@ -66,17 +76,6 @@ class BmCashoutStatusNotification extends Notification
     }
 
     /**
-     * Get the mail representation of the notification.
-     */
-    public function toMail(object $notifiable): MailMessage
-    {
-        return (new MailMessage)
-                    ->line('The introduction to the notification.')
-                    ->action('Notification Action', url('/'))
-                    ->line('Thank you for using our application!');
-    }
-
-    /**
      * Get the array representation of the notification.
      *
      * @return array<string, mixed>
@@ -84,15 +83,15 @@ class BmCashoutStatusNotification extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            'transaction_id'=> $this->status->transaction_id,
-            'status' => $this->status->transaction_status,
-            'title' => 'Transaction Status Updated to '.$this->status->transaction_status,
-            'message' => 'Your transaction '.$this->status->transaction_reference.' status has been updated to '.$this->status->transaction_status,
+            'booking_id'=> $this->booking->booking_id,
+            'status' => $this->booking->status,
+            'title' => 'You have a new booking request',
+            'message' => 'You have a new booking request for '.$this->booking->service->title,
         ];
     }
 
     public function databaseType(object $notifiable): string
     {
-        return 'bm_cashout_status';
+        return 'new_booking';
     }
 }

@@ -4,11 +4,13 @@ namespace App\Providers;
 
 use App\Events\BmCashoutStatusUpdate;
 use App\Events\BookingStatusUpdated;
+use App\Events\NewBooking;
 use App\Events\ServiceRequested;
 use App\Events\ServiceRequestStatusUpdated;
 use App\Events\SystemNotificationEvent;
 use App\Events\MessageSent;
 use App\Listeners\BmCashoutStatusUpdateListener;
+use App\Listeners\NewBookingListener;
 use App\Listeners\SendBookingStatusUpdate;
 use App\Listeners\SendServiceRequestStatusUpdate;
 use App\Listeners\SendSystemNotification;
@@ -47,6 +49,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         BmCashoutStatusUpdate::class => [
             BmCashoutStatusUpdateListener::class,
+        ],
+        NewBooking::class => [
+            NewBookingListener::class,
         ],
     ];
 

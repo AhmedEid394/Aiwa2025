@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\NewBooking;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\ChatController;
@@ -54,7 +55,7 @@ class BookingController extends Controller
         $booking = Booking::with(['service', 'service.provider'])
             ->where('booking_id', $booking->booking_id)
             ->first();
-
+        event(new NewBooking($booking));
         return response()->json($booking, 201);
     }
 
