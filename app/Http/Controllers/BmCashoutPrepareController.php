@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BmCashoutPrepare;
 
 use App\Http\Controllers\SignerService;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
@@ -199,6 +200,7 @@ class BmCashoutPrepareController extends Controller
         $transactionAmount = (float) $postData['TransactionAmount'];
         $aiwaFees = $transactionAmount * 0.125;
         $finalAmount = $transactionAmount - $aiwaFees;
+        $postData['TransactionAmount'] = $finalAmount;
 
         $transaction->update([
             'message_id' => $postData['MessageId'],
@@ -216,6 +218,14 @@ class BmCashoutPrepareController extends Controller
             'transaction_date_time' => Carbon::createFromFormat('d/m/Y H:i:s', $postData['TransactionDateTime']),
             'creditor_id' => $postData['CreditorId'],
             'signature' => $postData['Signature']
+        ]);
+        Transaction::create([
+            'transaction_type' => 'cash_out',
+            'amount' => $finalAmount,
+            'status' => 'pending',
+            'user_id' => $postData['CreditorId'],
+            'user_type' => 'Provider',
+            'transaction_reference'=>$postData['TransactionId']
         ]);
     }
 

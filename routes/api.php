@@ -59,6 +59,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users/profile', [UserController::class, 'show']);
     Route::post('/users/profile', [UserController::class, 'update']);
     Route::delete('/users/profile', [UserController::class, 'destroy']);
+    Route::get('/users', [UserController::class, 'index']);
+    Route::get('/users/get/{id}', [UserController::class, 'showUser']);
+    Route::post('/users/update/{id}', [UserController::class, 'updateUser']);
 
     Route::get('/getDistance', [Controller::class, 'getDistance']);
 
@@ -86,7 +89,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/service-requests/{id}/status', [ServiceRequestController::class, 'updateStatus']);
     Route::get('/provider/accepted-requests', [ServiceRequestController::class, 'getProviderAcceptedRequests']);
     Route::get('/auth-user/requests', [ServiceRequestController::class, 'getAuthUserRequests']);
-
+    Route::get('/service-requests/{id}/status', [ServiceRequestController::class, 'checkRequestStatus']);
     // Service routes
     Route::post('/services', [ServiceController::class, 'store']);
     Route::get('/services/{id}', [ServiceController::class, 'show']);
@@ -190,6 +193,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/papers/upload', [PaperController::class, 'uploadPapers']);
     Route::get('/papers', [PaperController::class, 'getPapers']);
     Route::get('/verify-status', [PaperController::class, 'checkVerification']);
+    Route::get('/papers/provider/{id}', [PaperController::class, 'getUserPapers']);
+    Route::get('/papers/pending', [PaperController::class, 'getPendingPapers']);
+    Route::post('/papers/status/{id}', [PaperController::class, 'changePapersStatus']);
 
 });
 

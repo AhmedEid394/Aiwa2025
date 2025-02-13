@@ -43,7 +43,7 @@ class Kernel extends ConsoleKernel
                     FILE_APPEND
                 );
             }
-        })->everyThirtyMinutes();    // Run in background
+        })->everyFiveMinutes();    // Run in background
     }
 
     /**

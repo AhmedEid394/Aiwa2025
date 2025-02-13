@@ -12,10 +12,11 @@ class Paper extends Model
     protected $fillable = [
         'user_id',
         'user_type',
-        'front_photo', 
-        'back_photo', 
+        'front_photo',
+        'back_photo',
         'criminal_record_photo',
-        'status', 
+        'status',
+        'criminal_record_status',
         'notes',
     ];
 

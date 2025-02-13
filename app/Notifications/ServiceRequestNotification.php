@@ -50,6 +50,10 @@ class ServiceRequestNotification extends Notification implements ShouldBroadcast
                     'apns' => [
                         'payload' => [
                             'aps' => [
+                                'alert' => [
+                                    'title' => $this->serviceRequest->title,
+                                    'body' => $this->serviceRequest->description,
+                                ],
                                 'sound' => 'default'
                             ],
                         ],

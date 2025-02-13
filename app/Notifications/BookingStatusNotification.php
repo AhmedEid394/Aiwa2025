@@ -55,6 +55,10 @@ class BookingStatusNotification extends Notification
                 'apns' => [
                     'payload' => [
                         'aps' => [
+                            'alert' => [
+                                'title' => 'Booking '. $this->booking->title .'Status Updated',
+                                'body' => 'Your booking status has been updated to '.$this->booking->status,
+                            ],
                             'sound' => 'default'
                         ],
                     ],

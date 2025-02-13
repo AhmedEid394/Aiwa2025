@@ -66,6 +66,10 @@ class MassageNotification extends Notification
                 'apns' => [
                     'payload' => [
                         'aps' => [
+                            'alert' => [
+                                'title' => 'New Message',
+                                'body' => $this->message->message,
+                            ],
                             'sound' => 'default',
                         ],
                     ],

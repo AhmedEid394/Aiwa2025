@@ -178,17 +178,19 @@ class ServiceRequestController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $serviceRequests = ServiceRequest::with('user')
-            ->where('provider_id', $user->provider_id)
-            ->where(function($query) {
-                $query->where('status', 'accepted')
-                    ->orWhere('status', 'accepted but not payed');
-            })
+        $serviceRequests = ServiceRequest::where('provider_id', $user->provider_id)
+            ->where('status', 'accepted')
+            ->orWhere('status', 'accepted but not payed')
             ->latest()
             ->get();
 
+        $service=[];
+        foreach ($serviceRequests as $serviceRequest) {
+            $serviceRequest->user=$serviceRequest->user();
+            $service[]=$serviceRequest;
+        }
         return response()->json([
-            'data' => $serviceRequests,
+            'data' => $service,
             'status' => 200,
         ], 200);
     }
@@ -213,6 +215,18 @@ class ServiceRequestController extends Controller
             'status' => 200,
         ], 200);
 
+    }
+
+    public function checkRequestStatus(Request $request,$id)
+    {
+        $serviceRequest = ServiceRequest::find($id);
+        if (!$serviceRequest) {
+            return response()->json(['error' => 'Service request not found'], 404);
+        }
+        return response()->json([
+            'status' => $serviceRequest->status,
+            'service_request' => $serviceRequest
+        ], 200);
     }
 
 }

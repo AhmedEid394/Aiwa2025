@@ -25,7 +25,7 @@ class ServiceController extends Controller
         try {
             $validatedData = $request->validate([
                 'title' => 'required|string|max:255',
-                'sub_category_id' => 'required|exists:sub_categories,sub_category_id',
+//                'sub_category_id' => 'required|exists:sub_categories,sub_category_id',
                 'description' => 'required|string',
                 'service_fee' => 'required|numeric|min:0',
                 'pictures' => 'array|max:5',
@@ -43,7 +43,7 @@ class ServiceController extends Controller
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         }
-
+        $validatedData['sub_category_id'] = $request->user()->sub_category_id;
         try {
             $uploadedPictures = [];
 
@@ -326,9 +326,9 @@ class ServiceController extends Controller
                     'service_fee' => $service->service_fee,
                     'pictures' => $service->pictures,
                     'add_ons' => $service->add_ons,
-                    'sale_amount' => $service->sale_amount,
-                    'sale_percentage' => $service->sale_percentage,
-                    'down_payment' => $service->down_payment,
+                    'sale_amount' => $service->sale_amount??null,
+                    'sale_percentage' => $service->sale_percentage??null,
+                    'down_payment' => $service->down_payment??null,
                     'latitude' => $service->latitude,
                     'longitude' => $service->longitude,
                     'building' => $service->building,

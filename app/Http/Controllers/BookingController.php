@@ -216,7 +216,10 @@ class BookingController extends Controller
             $query->where('provider_id', $provider->provider_id);
         })
             ->with(['service', 'service.provider'])
-            ->orderBy('created_at', 'desc')
+            ->where('status', 'request')
+            ->orWhere('status', 'accepted')
+            ->orWhere('status', 'accepted but not payed')
+            ->latest()
             ->get();
 
         return response()->json(['data' => $workOrders,'success' => true],200, ['Content-Type' => 'application/vnd.api+json'],  JSON_UNESCAPED_SLASHES);

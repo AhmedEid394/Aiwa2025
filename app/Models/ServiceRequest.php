@@ -34,9 +34,9 @@ class ServiceRequest extends Model
     public function user()
     {
         if ($this->user_type === 'user') {
-            return $this->belongsTo(User::class, 'user_id', 'user_id');
+            return User::find($this->user_id);
         }
-        return $this->belongsTo(ServiceProvider::class, 'user_id', 'provider_id');
+        return ServiceProvider::find($this->user_id);
     }
 
     public function subCategory()

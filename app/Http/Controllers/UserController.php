@@ -145,4 +145,68 @@ class UserController extends Controller
         $user->delete();
         return response()->json(null, 201);
     }
+
+    public function index()
+    {
+        $users = User::latest()->get();
+        return response()->json($users);
+    }
+
+    public function showUser($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+        return response()->json($user, 200, ['Content-Type' => 'application/vnd.api+json'], JSON_UNESCAPED_SLASHES);
+    }
+
+    public function deleteUser($id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+        $user->delete();
+        return response()->json(null, 201);
+    }
+
+    public function updateUser(Request $request, $id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+        Log::info('request', ['request' => $request->all()]);
+        try {
+            $validatedData = $request->validate([
+                'f_name' => 'sometimes|string|max:255',
+                'l_name' => 'sometimes|string|max:255',
+                'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->user_id . ',user_id',
+                'phone' => 'sometimes|string|unique:users,phone,' . $user->user_id . ',user_id',
+                'gender' => 'sometimes|in:male,female',
+                'os' => 'sometimes|string',
+                'birthday' => 'sometimes|date',
+                'profile_photo' => 'nullable',
+                'country' => 'nullable|string',
+                'maxDistance' => 'nullable|integer',
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json(['errors' => $e->errors()], 422);
+        }
+        // Upload profile photo to Cloudinary if provided
+        if ($request->hasFile('profile_photo')) {
+            Log::info('Uploading profile photo to Cloudinary');
+            $path = $request->file('profile_photo')->getRealPath();
+            if (!$path) {
+                return response()->json(['error' => 'Invalid profile photo provided'], 400);
+            }
+            $uploadResult = $this->cloudImageService->upload($path);
+            $validatedData['profile_photo'] = $uploadResult['secure_url']; // Update the Cloudinary URL
+            Log::info('Profile photo uploaded successfully', ['url' => $validatedData['profile_photo']]);
+        }
+        $user->update($validatedData);
+
+        return response()->json($user,200, ['Content-Type' => 'application/vnd.api+json'], JSON_UNESCAPED_SLASHES);
+    }
 }

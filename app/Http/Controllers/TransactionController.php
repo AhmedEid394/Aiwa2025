@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BmCashoutPrepare;
 use App\Models\ServiceProvider;
 use App\Models\Transaction;
 use App\Models\User;
@@ -16,10 +17,13 @@ class TransactionController extends Controller
     {
         $user = auth()->user();
         $userId=null;
+        $user_type=null;
         if ($user instanceof ServiceProvider) {
             $userId= $user->provider_id;
+            $user_type='Provider';
         } elseif ($user instanceof User) {
             $userId= $user->user_id;
+            $user_type='user';
         } else {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
@@ -27,11 +31,17 @@ class TransactionController extends Controller
         $query = Transaction::with(['service']);
 
         if ($userId) {
-            $query->where('user_id', $userId);
+            $query->where('user_id', $userId)
+                ->where('user_type', $user_type);
+
         }
 
         $transactions = $query->orderBy('created_at', 'desc')->get();
-
+        foreach ($transactions as $transaction) {
+            if($transaction->transaction_type=='cash_out'){
+                $transaction->transaction_cashout=BmCashoutPrepare::where('transaction_id',$transaction->transaction_reference)->first();
+            }
+        }
         return response()->json($transactions);
     }
 
@@ -105,5 +115,21 @@ class TransactionController extends Controller
         $transaction->delete();
 
         return response()->json(null, 201);
+    }
+
+    public function getCashOutTransactions(Request $request)
+    {
+        $user = auth()->user();
+        $userId=null;
+
+        $query = Transaction::with(['service'])->where('transaction_type', 'cash_out');
+
+        if ($userId) {
+            $query->where('user_id', $userId);
+        }
+
+        $transactions = $query->orderBy('created_at', 'desc')->get();
+
+        return response()->json($transactions);
     }
 }

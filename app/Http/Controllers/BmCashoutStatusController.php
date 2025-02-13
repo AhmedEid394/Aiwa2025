@@ -6,6 +6,8 @@ use App\Events\BmCashoutStatusUpdate;
 use App\Models\BmCashoutStatus;
 use App\Models\BmCashoutPrepare;
 use App\Http\Controllers\SignerService;
+use App\Models\Transaction;
+use App\Models\Wallet;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
@@ -16,7 +18,9 @@ class BmCashoutStatusController extends Controller
 
     const STATUS_INITIAL_SUCCESS = '8000';
     const STATUS_PROCESSING = '8222';
-    const STATUS_SETTLED = '8333';
+    const STATUS_ACCEPTED_NOT_SETTLED = '8111';
+    const STATUS_SETTLED = '8222';
+    const STATUS_SETTLED_FINAL = '8333';
     const STOP_CHECK_STATUSES = ['8001', '8002', '8003', '8004', '8005', '8006', '8007', '8008', '8011', '8888'];
     const ERROR_STATUSES = ['0100', '0101', '0102', '0103', '0104','0105','0106','0107','0108', '0001', '0002', '0003'];
 
@@ -194,13 +198,32 @@ class BmCashoutStatusController extends Controller
             'signature' => $signature
         ]);
 
-        if ($statusCode === self::STATUS_SETTLED || in_array($statusCode, self::ERROR_STATUSES)) {
-            $transaction->update(['prepared_flag' => false]);
+        if ($statusCode === self::STATUS_SETTLED || $statusCode === self::STATUS_ACCEPTED_NOT_SETTLED || $statusCode === self::STATUS_SETTLED_FINAL || in_array($statusCode, self::ERROR_STATUSES)) {
+            $transaction->update([
+                'prepared_flag' => false,
+                'response_code' => $statusCode,
+                'response_description' => $response['TransactionStatusDescription']
+            ]);
+            $transactionCashout=Transaction::where('transaction_reference', $transaction->transaction_id)->first();
+            if ($statusCode === self::STATUS_SETTLED || $statusCode === self::STATUS_ACCEPTED_NOT_SETTLED || $statusCode === self::STATUS_SETTLED_FINAL) {
+                $wallet=Wallet::where('provider_id',$transaction->creditor_id)->first();
+                $wallet->update([
+                    'available_amount' => $wallet->available_amount - $transaction->transaction_amount,
+                    'total_amount' => $wallet->total_amount - $transaction->transaction_amount
+                ]);
+                $transactionCashout->update([
+                    'status' => 'completed'
+                ]);
+            }
+            if (in_array($statusCode, self::ERROR_STATUSES)) {
+                $transactionCashout->update([
+                    'status' => 'failed'
+                ]);
+            }
+            $transactionCashout->transaction_details=$transaction;
+            event(new BmCashoutStatusUpdate($transactionCashout, $transaction->creditor_id));
+
         }
-
-        event(new BmCashoutStatusUpdate($status, $transaction->creditor_id));
-
-        $this->logMessage("Transaction ID {$transaction->transaction_id} updated with status: $statusCode");
 
         return [
             'transaction_id' => $transaction->transaction_id,

@@ -54,6 +54,10 @@ class BmCashoutStatusNotification extends Notification
                 'apns' => [
                     'payload' => [
                         'aps' => [
+                            'alert' => [
+                                'title' => 'Transaction Status Updated',
+                                'body' => 'Your transaction status has been updated to '.$this->status,
+                            ],
                             'sound' => 'default'
                         ],
                     ],
@@ -83,7 +87,10 @@ class BmCashoutStatusNotification extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            'status' => $this->status,
+            'transaction_id',
+            'status' => $this->status->transaction_status,
+            'title' => 'Transaction Status Updated to '.$this->status->transaction_status,
+            'message' => 'Your transaction '.$this->status->transaction_reference.' status has been updated to '.$this->status->transaction_status,
         ];
     }
 

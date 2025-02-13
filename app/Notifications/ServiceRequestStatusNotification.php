@@ -53,6 +53,10 @@ class ServiceRequestStatusNotification extends Notification
                 'apns' => [
                     'payload' => [
                         'aps' => [
+                            'alert' => [
+                                'title' => $this->serviceRequest->title.' status updated',
+                                'body' => 'The status of the service is now '.$this->serviceRequest->status,
+                            ],
                             'sound' => 'default'
                         ],
                     ],

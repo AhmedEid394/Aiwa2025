@@ -280,6 +280,7 @@ class PaperController extends Controller
             $verificationStatus = Paper::where('user_id', $user->provider_id)
                 ->where('user_type', 'Provider')
                 ->where('status', 'accepted')
+                ->where('criminal_record_status', 'accepted')
                 ->exists();
 
             return response()->json([
@@ -297,5 +298,70 @@ class PaperController extends Controller
 
         return response()->json(['error' => 'Unauthorized'], 401);
     }
+
+    public function getUserPapers(Request $request, $id)
+    {
+        $papers = Paper::where('user_id', $id)
+            ->where('user_type', 'Provider')
+            ->first();
+
+        return response()->json([
+            'data' => $papers,
+            'success' => true
+        ], 200, ['Content-Type' => 'application/vnd.api+json'],  JSON_UNESCAPED_SLASHES);
+    }
+
+    public function getPendingPapers(Request $request)
+    {
+        // Retrieve all pending papers.
+        $papers = Paper::where('status', 'pending')->get();
+        $newPapers = [];
+        // Loop through each paper and attach its ServiceProvider.
+        foreach ($papers as $paper) {
+            // Replace 'service_provider_id' with the actual field name if different.
+            // Here we assume that the ServiceProvider model is imported and available.
+            $serviceProvider = ServiceProvider::find($paper->user_id);
+
+            // Option 1: Add a new property to the paper.
+//            $paper->service_provider = $serviceProvider;
+
+            // Option 2: If you want to format the output differently,
+            // you could create a new array with the paper and its provider.
+             $paper = [
+                 'paper' => $paper,
+                 'service_provider' => $serviceProvider
+             ];
+            $newPapers[] = $paper;
+        }
+
+        // Return the modified list of papers with their service providers.
+        return response()->json([
+            'data' => $newPapers,
+            'success' => true
+        ], 200, ['Content-Type' => 'application/vnd.api+json'], JSON_UNESCAPED_SLASHES);
+    }
+
+    public function changePapersStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'sometimes|string|in:accepted,rejected,pending',
+            'notes' => 'nullable|string',
+            'criminal_record_status' => 'sometimes|string|in:accepted,rejected,pending',
+        ]);
+        $paper = Paper::find($id);
+
+        if (!$paper) {
+            return response()->json(['error' => 'Paper not found'], 404);
+        }
+
+
+        $paper->update($request->all());
+
+        return response()->json([
+            'message' => 'Paper status updated successfully',
+            'success' => true
+        ], 200);
+    }
+
 
 }
